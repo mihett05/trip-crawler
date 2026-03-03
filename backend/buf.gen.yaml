@@ -1,0 +1,14 @@
+version: v2
+managed:
+  enabled: true
+plugins:
+  - local: protoc-gen-go
+    out: pkg/gen
+    opt: paths=source_relative
+
+  - local: protoc-gen-openapi
+    out: pkg/gen/openapi
+    opt:
+      - version=1.0.0
+      - title="Trip Crawler API"
+      - naming=json
