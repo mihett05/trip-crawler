@@ -1,0 +1,16 @@
+install:
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+	go install github.com/google/gnostic/cmd/protoc-gen-openapi@latest
+	go install github.com/bufbuild/buf/cmd/buf@latest
+
+gen:
+	buf generate
+
+run:
+	go run ./cmd/service/main.go
+
+up:
+	docker compose up -d
+
+clean:
+	docker compose down --volumes

@@ -1,0 +1,42 @@
+services:
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.136.0
+    ports:
+      - "8428:8428"
+    volumes:
+      - vmdata:/storage
+    command:
+      - "--storageDataPath=/storage"
+      - "--httpListenAddr=:8428"
+  victorialogs:
+    image: victoriametrics/victoria-logs:v1.47.0
+    ports:
+      - "9428:9428"
+    volumes:
+      - vldata:/storage
+    command:
+      - "--storageDataPath=/storage"
+  victoriatraces:
+    image: victoriametrics/victoria-traces:v0.8.0
+    ports:
+      - "10428:10428"
+    volumes:
+      - vtdata:/storage
+    command:
+      - "--storageDataPath=/storage"
+
+  otel-collector:
+    image: otel/opentelemetry-collector:0.146.1
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    command:
+      - "--config=/etc/otelcol/config.yaml"
+
+
+volumes:
+  vmdata:
+  vldata:
+  vtdata:
