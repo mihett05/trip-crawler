@@ -9,8 +9,12 @@ gen:
 run:
 	go run ./cmd/service/main.go
 
+up-debug:
+	docker compose -f docker-compose.dev.yaml up -d
+
 up:
 	docker compose up -d
 
 clean:
 	docker compose down --volumes
+	docker compose -f docker-compose.dev.yaml down --volumes

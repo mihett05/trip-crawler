@@ -5,7 +5,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
-	routeshandlers "github.com/mihett05/trip-crawler/internal/mainservice/routes/handlers"
+	routeshandlers "github.com/mihett05/trip-crawler/internal/service/routes/handlers"
 	"github.com/mihett05/trip-crawler/pkg/application/config"
 )
 
