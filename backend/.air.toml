@@ -1,0 +1,17 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -gcflags='all=-N -l' -o ./tmp/${APP_NAME} ./cmd/${APP_NAME}"
+bin = "tmp/${APP_NAME}"
+full_bin = "dlv exec --headless --listen=:40000 --api-version=2 --accept-multiclient --continue --log ./tmp/${APP_NAME} --"
+delay = 200
+include_ext = ["go", "mod", "sum", "yaml", "yml", "json", "toml", "env"]
+exclude_dir = ["tmp", "vendor", ".git"]
+stop_on_error = true
+
+[log]
+time = true
+
+[misc]
+clean_on_exit = true

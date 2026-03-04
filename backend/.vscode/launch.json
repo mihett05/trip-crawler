@@ -1,0 +1,16 @@
+{
+  "configurations": [
+    {
+      "name": "dlv service",
+      "type": "go",
+      "request": "attach",
+      "mode": "remote",
+      "host": "127.0.0.1",
+      "port": 40000,
+      "remotePath": "/app",
+      "disconnect": {
+        "terminateDebuggee": false
+      }
+    }
+  ]
+}

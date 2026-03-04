@@ -1,4 +1,4 @@
-package mainservice
+package service
 
 import (
 	"context"
@@ -8,13 +8,14 @@ import (
 	"net/http"
 	"time"
 
-	apphttp "github.com/mihett05/trip-crawler/internal/mainservice/http"
-	routeshandlers "github.com/mihett05/trip-crawler/internal/mainservice/routes/handlers"
-	"github.com/mihett05/trip-crawler/pkg/application"
 	"go.uber.org/zap"
+
+	apphttp "github.com/mihett05/trip-crawler/internal/service/http"
+	routeshandlers "github.com/mihett05/trip-crawler/internal/service/routes/handlers"
+	"github.com/mihett05/trip-crawler/pkg/application"
 )
 
-const envFileName = ".env.mainservice.local"
+const envFileName = ".env.service.local"
 
 type App struct {
 	App    *application.App
@@ -49,7 +50,7 @@ func (a *App) Run() {
 	go func() {
 		a.App.Observability.Logger.Info("main service server started", zap.Uint16("port", a.App.Config.HTTP.Port))
 		if err := a.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			a.App.Observability.Logger.Fatal("mainservice.App.Server.ListenAndServe: server failed", zap.Error(err))
+			a.App.Observability.Logger.Fatal("service.App.Server.ListenAndServe: server failed", zap.Error(err))
 		}
 	}()
 
@@ -60,6 +61,6 @@ func (a *App) Run() {
 	defer a.App.Shutdown(ctxShutdown)
 
 	if err := a.Server.Shutdown(ctxShutdown); err != nil {
-		a.App.Observability.Logger.Fatal("mainservice.App.Server.Shutdown: server forced to shutdown", zap.Error(err))
+		a.App.Observability.Logger.Fatal("service.App.Server.Shutdown: server forced to shutdown", zap.Error(err))
 	}
 }
