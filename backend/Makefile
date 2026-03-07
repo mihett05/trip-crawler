@@ -7,7 +7,7 @@ gen:
 	buf generate
 
 run:
-	go run ./cmd/service/main.go
+	go run ./cmd/service/main.go --envFile=configs/.env.service.local
 
 up-debug:
 	docker compose -f docker-compose.dev.yaml up -d

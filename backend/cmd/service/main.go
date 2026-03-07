@@ -2,17 +2,27 @@ package main
 
 import (
 	"context"
+	"flag"
+	"os/signal"
+	"syscall"
 
 	"github.com/mihett05/trip-crawler/internal/service"
 )
 
 func main() {
-	ctx := context.Background()
+	envFile := flag.String("envFile", "", "env file for load")
+	flag.Parse()
 
-	app, err := service.New(ctx)
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
+	app, err := service.New(ctx, *envFile)
 	if err != nil {
 		panic(err)
 	}
 
-	app.Run()
+	app.Start()
+
+	<-ctx.Done()
+	app.Shutdown()
 }

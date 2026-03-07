@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"time"
 
 	"go.uber.org/zap"
 
@@ -15,14 +14,12 @@ import (
 	"github.com/mihett05/trip-crawler/pkg/application"
 )
 
-const envFileName = ".env.service.local"
-
 type App struct {
 	App    *application.App
 	Server *http.Server
 }
 
-func New(ctx context.Context) (*App, error) {
+func New(ctx context.Context, envFileName string) (*App, error) {
 	app, err := application.New(ctx, envFileName)
 	if err != nil {
 		return nil, fmt.Errorf("application.New: %w", err)
@@ -46,17 +43,17 @@ func New(ctx context.Context) (*App, error) {
 	}, nil
 }
 
-func (a *App) Run() {
+func (a *App) Start() {
 	go func() {
 		a.App.Observability.Logger.Info("main service server started", zap.Uint16("port", a.App.Config.HTTP.Port))
 		if err := a.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			a.App.Observability.Logger.Fatal("service.App.Server.ListenAndServe: server failed", zap.Error(err))
 		}
 	}()
+}
 
-	a.App.WaitUntilStop()
-
-	ctxShutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (a *App) Shutdown() {
+	ctxShutdown, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	defer a.App.Shutdown(ctxShutdown)
 

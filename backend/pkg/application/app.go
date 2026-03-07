@@ -3,8 +3,6 @@ package application
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/signal"
 
 	"github.com/mihett05/trip-crawler/pkg/application/config"
 	"github.com/mihett05/trip-crawler/pkg/application/observability"
@@ -30,12 +28,6 @@ func New(ctx context.Context, envFileName string) (*App, error) {
 		Config:        cfg,
 		Observability: obs,
 	}, nil
-}
-
-func (a *App) WaitUntilStop() {
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt)
-	<-quit
 }
 
 func (a *App) Shutdown(ctx context.Context) {
