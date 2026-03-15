@@ -9,7 +9,8 @@ import (
 
 	"go.uber.org/zap"
 
-	apphttp "github.com/mihett05/trip-crawler/internal/service/http"
+	"github.com/mihett05/trip-crawler/internal/service/core/dgraph"
+	apphttp "github.com/mihett05/trip-crawler/internal/service/core/http"
 	routeshandlers "github.com/mihett05/trip-crawler/internal/service/routes/handlers"
 	"github.com/mihett05/trip-crawler/pkg/application"
 )
@@ -17,6 +18,7 @@ import (
 type App struct {
 	App    *application.App
 	Server *http.Server
+	DGraph *dgraph.Client
 }
 
 func New(ctx context.Context, envFileName string) (*App, error) {
@@ -25,12 +27,18 @@ func New(ctx context.Context, envFileName string) (*App, error) {
 		return nil, fmt.Errorf("application.New: %w", err)
 	}
 
+	dgraphClient, err := dgraph.New(app.Config)
+	if err != nil {
+		return nil, fmt.Errorf("dgraph.New: %w", err)
+	}
+
 	routesHandler := routeshandlers.NewHTTPHandler(app.Observability.Logger)
 
 	httpHandler := apphttp.NewHandler(app.Config, routesHandler)
 
 	return &App{
-		App: app,
+		App:    app,
+		DGraph: dgraphClient,
 		Server: &http.Server{
 			Addr:         fmt.Sprintf(":%d", app.Config.HTTP.Port),
 			Handler:      httpHandler,

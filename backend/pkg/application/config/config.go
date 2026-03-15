@@ -8,9 +8,10 @@ import (
 )
 
 type Config struct {
-	App           AppConfig           `envPrefix:"APP_"`
-	HTTP          HTTPConfig          `envPrefix:"HTTP_"`
-	Observability ObservabilityConfig `envPrefix:"OBSERVABILITY_"`
+	App              AppConfig           `envPrefix:"APP_"`
+	HTTP             HTTPConfig          `envPrefix:"HTTP_"`
+	Observability    ObservabilityConfig `envPrefix:"OBSERVABILITY_"`
+	DGraphConnection string              `env:"DGRAPH_CONNECTION"`
 }
 
 func New(filename string) (Config, error) {
