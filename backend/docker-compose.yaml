@@ -35,8 +35,80 @@ services:
     command:
       - "--config=/etc/otelcol/config.yaml"
 
+  nats:
+    image: nats:2.12.5-linux
+    command:
+      - "--name=nats-dev"
+      - "--jetstream"
+      - "--store_dir=/data"
+      - "--http_port=8222"
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - nats-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "http://127.0.0.1:8222/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  dgraph-zero:
+    image: dgraph/dgraph:v25.3.0
+    command:
+      - dgraph
+      - zero
+      - --my=dgraph-zero:5080
+      - --raft=idx=1
+      - --bindall
+    ports:
+      - "5080:5080"
+      - "6080:6080"
+    volumes:
+      - dgraph-zero-data:/dgraph
+    healthcheck:
+      test: ["CMD", "curl", "http://127.0.0.1:6080/state"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  dgraph-alpha:
+    image: dgraph/dgraph:v25.3.0
+    depends_on:
+      dgraph-zero:
+        condition: service_healthy
+    command:
+      - dgraph
+      - alpha
+      - --my=dgraph-alpha:7080
+      - --zero=dgraph-zero:5080
+      - --bindall
+      - --security
+      - whitelist=0.0.0.0/0
+    ports:
+      - "7080:7080"
+      - "8080:8080"
+      - "9080:9080"
+    volumes:
+      - dgraph-alpha-data:/dgraph
+    healthcheck:
+      test: ["CMD", "curl", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+
+  ratel:
+    image: dgraph/ratel:latest
+    depends_on:
+      dgraph-alpha:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
 
 volumes:
   vmdata:
   vldata:
   vtdata:
+  nats-data:
+  dgraph-zero-data:
+  dgraph-alpha-data:
