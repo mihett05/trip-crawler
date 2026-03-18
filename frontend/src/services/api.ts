@@ -1,5 +1,24 @@
 // Mock API service for trip planning
 
+interface TripSegment {
+  id: number;
+  city: string;
+  coordinates: [number, number]; // [latitude, longitude]
+  arrivalDate: string; // ISO date string
+  departureDate: string; // ISO date string
+  duration: number; // number of days
+}
+
+interface TripDetails {
+  id: number;
+  route: TripSegment[];
+  totalDistance: number; // in kilometers
+  totalDays: number;
+  origin: string;
+  destination: string;
+  stops: string[];
+}
+
 // Generate random coordinates for a city
 const generateMockCoordinates = (cityName: string): [number, number] => {
   // Simple hash function to generate consistent coordinates for each city
@@ -40,10 +59,14 @@ export const fetchCitySuggestions = async (input: string): Promise<string[]> => 
   ).slice(0, 5); // Return max 5 suggestions
 };
 
-// Mock API function to generate trip route
-export const generateTripRoute = async (formData: any): Promise<any> => {
+  // Mock API function to generate trip route
+export const generateTripRoute = async (formData: { departureCity: string; middleCities: string[]; destinationCity: string; startDate: Date | null; tripDuration: number }): Promise<TripDetails> => {
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 1500));
+  
+  if (formData.startDate === null) {
+    throw new Error('Start date is required');
+  }
   
   // Create a route with all cities including departure, middle, and destination
   const allCities = [formData.departureCity, ...formData.middleCities, formData.destinationCity];
@@ -53,7 +76,7 @@ export const generateTripRoute = async (formData: any): Promise<any> => {
     const [lat, lng] = generateMockCoordinates(city);
     
     // Calculate arrival and departure dates
-    const startDate = new Date(formData.startDate);
+    const startDate = new Date(formData.startDate!);
     const arrivalDate = new Date(startDate);
     arrivalDate.setDate(arrivalDate.getDate() + Math.floor(Math.random() * index * 2)); // Stagger arrival
     
@@ -63,7 +86,7 @@ export const generateTripRoute = async (formData: any): Promise<any> => {
     return {
       id: index,
       city,
-      coordinates: [lat, lng],
+      coordinates: [lat, lng] as [number, number],
       arrivalDate: arrivalDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
       departureDate: departureDate.toISOString().split('T')[0],
       duration: 1 + Math.floor(Math.random() * 2) // Random stay duration between 1-2 days
