@@ -11,14 +11,16 @@ import (
 
 	"github.com/mihett05/trip-crawler/internal/service/core/dgraph"
 	apphttp "github.com/mihett05/trip-crawler/internal/service/core/http"
+	"github.com/mihett05/trip-crawler/internal/service/repository/graph"
 	routeshandlers "github.com/mihett05/trip-crawler/internal/service/routes/handlers"
 	"github.com/mihett05/trip-crawler/pkg/application"
 )
 
 type App struct {
-	App    *application.App
-	Server *http.Server
-	DGraph *dgraph.Client
+	App       *application.App
+	Server    *http.Server
+	DGraph    *dgraph.Client
+	GraphRepo *graph.Repository
 }
 
 func New(ctx context.Context, envFileName string) (*App, error) {
@@ -32,13 +34,16 @@ func New(ctx context.Context, envFileName string) (*App, error) {
 		return nil, fmt.Errorf("dgraph.New: %w", err)
 	}
 
+	graphRepo := graph.NewRepository(dgraphClient)
+
 	routesHandler := routeshandlers.NewHTTPHandler(app.Observability.Logger)
 
 	httpHandler := apphttp.NewHandler(app.Config, routesHandler)
 
 	return &App{
-		App:    app,
-		DGraph: dgraphClient,
+		App:       app,
+		DGraph:    dgraphClient,
+		GraphRepo: graphRepo,
 		Server: &http.Server{
 			Addr:         fmt.Sprintf(":%d", app.Config.HTTP.Port),
 			Handler:      httpHandler,
