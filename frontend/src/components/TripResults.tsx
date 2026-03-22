@@ -11,6 +11,7 @@ import {
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Icon } from 'leaflet';
+import { useTranslation } from 'react-i18next';
 
 // Fix for default marker icon in Leaflet with React
 declare global {
@@ -73,6 +74,7 @@ const customIcon = new Icon({
 });
 
 const TripResults: React.FC<TripResultsProps> = ({ tripData }) => {
+  const { t } = useTranslation(); // Добавляем использование хука перевода
   // Find the center of the map based on the route
   const getMapCenter = (): [number, number] => {
     if (tripData.route.length === 0) return [51.505, -0.09]; // Default to London if no route
@@ -111,10 +113,13 @@ const TripResults: React.FC<TripResultsProps> = ({ tripData }) => {
         >
           <Box sx={{ flex: 1 }}>
             <Typography variant="h5" sx={{ fontWeight: 600 }}>
-              Trip from {tripData.origin} to {tripData.destination}
+              {t('tripFromTo', { origin: tripData.origin, destination: tripData.destination })}
             </Typography>
             <Typography variant="body1" sx={{ mt: 0.5, opacity: 0.9 }}>
-              {tripData.totalDays} days journey • {tripData.totalDistance.toLocaleString()} km
+              {t('journeyInfo', {
+                days: tripData.totalDays,
+                distance: tripData.totalDistance.toLocaleString(),
+              })}
             </Typography>
           </Box>
           <Box
@@ -127,10 +132,10 @@ const TripResults: React.FC<TripResultsProps> = ({ tripData }) => {
           >
             <Box sx={{ textAlign: 'right' }}>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                {tripData.stops.length + 2} Destinations
+                {t('destinationsCount', { count: tripData.stops.length + 2 })}
               </Typography>
               <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                Including stops
+                {t('includingStops')}
               </Typography>
             </Box>
           </Box>
@@ -142,7 +147,7 @@ const TripResults: React.FC<TripResultsProps> = ({ tripData }) => {
             gutterBottom
             sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}
           >
-            Route Details
+            {t('routeDetails')}
           </Typography>
 
           <Timeline position="left" sx={{ p: 0, mb: 3 }}>
@@ -191,7 +196,7 @@ const TripResults: React.FC<TripResultsProps> = ({ tripData }) => {
                                 fontWeight: 600,
                               }}
                             >
-                              START
+                              {t('start')}
                             </Typography>
                           )}
                           {index === tripData.route.length - 1 && (
@@ -208,15 +213,15 @@ const TripResults: React.FC<TripResultsProps> = ({ tripData }) => {
                                 fontWeight: 600,
                               }}
                             >
-                              END
+                              {t('end')}
                             </Typography>
                           )}
                         </Typography>
 
                         <Stack spacing={0.5} sx={{ mt: 1 }}>
                           <Typography variant="body2" color="text.secondary">
-                            <strong>Arrival:</strong>{' '}
-                            {new Date(segment.arrivalDate).toLocaleDateString('en-US', {
+                            <strong>{t('arrival')}</strong>{' '}
+                            {new Date(segment.arrivalDate).toLocaleDateString(undefined, {
                               weekday: 'short',
                               year: 'numeric',
                               month: 'short',
@@ -224,8 +229,8 @@ const TripResults: React.FC<TripResultsProps> = ({ tripData }) => {
                             })}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            <strong>Departure:</strong>{' '}
-                            {new Date(segment.departureDate).toLocaleDateString('en-US', {
+                            <strong>{t('departure')}</strong>{' '}
+                            {new Date(segment.departureDate).toLocaleDateString(undefined, {
                               weekday: 'short',
                               year: 'numeric',
                               month: 'short',
@@ -233,8 +238,12 @@ const TripResults: React.FC<TripResultsProps> = ({ tripData }) => {
                             })}
                           </Typography>
                           <Typography variant="body2" color="text.primary" sx={{ mt: 0.5 }}>
-                            <strong>Stay:</strong> {segment.duration} day
-                            {segment.duration !== 1 ? 's' : ''}
+                            <strong>
+                              {t('stay', {
+                                count: segment.duration,
+                                plural: segment.duration !== 1 ? 's' : '',
+                              })}
+                            </strong>
                           </Typography>
                         </Stack>
                       </Box>
@@ -284,7 +293,7 @@ const TripResults: React.FC<TripResultsProps> = ({ tripData }) => {
           }}
         >
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Trip Route Map
+            {t('tripRouteMap')}
           </Typography>
         </Box>
         <CardContent sx={{ height: 400, p: 0 }}>
@@ -301,9 +310,9 @@ const TripResults: React.FC<TripResultsProps> = ({ tripData }) => {
                   <div>
                     <strong>{segment.city}</strong>
                     <br />
-                    Arrive: {new Date(segment.arrivalDate).toLocaleDateString()}
+                    {t('arrive')}: {new Date(segment.arrivalDate).toLocaleDateString()}
                     <br />
-                    Depart: {new Date(segment.departureDate).toLocaleDateString()}
+                    {t('depart')}: {new Date(segment.departureDate).toLocaleDateString()}
                   </div>
                 </Popup>
               </Marker>

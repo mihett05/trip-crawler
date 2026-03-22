@@ -10,5 +10,12 @@ export type {
 export type { CreateRouteRequest } from './CreateRouteRequest.ts';
 export type { CreateRouteResponse } from './CreateRouteResponse.ts';
 export type { Error, ErrorCodeEnumKey } from './Error.ts';
+export type {
+  GetCities200,
+  GetCities500,
+  GetCitiesQuery,
+  GetCitiesQueryResponse,
+} from './GetCities.ts';
+export type { GetCitiesResponse } from './GetCitiesResponse.ts';
 export type { RoutePoint } from './RoutePoint.ts';
 export { errorCodeEnum } from './Error.ts';
