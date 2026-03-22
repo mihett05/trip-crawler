@@ -1,0 +1,33 @@
+{
+  "type": "object",
+  "required": ["points", "startDate", "durationMinDays"],
+  "properties": {
+    "points": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of destination points for the route",
+      "minItems": 1,
+      "example": ["Rome", "Paris", "London"]
+    },
+    "startDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Start date for the trip in YYYY-MM-DD format",
+      "example": "2024-01-15"
+    },
+    "durationMinDays": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Minimum duration of the trip in days",
+      "example": 7
+    },
+    "durationMaxDays": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Maximum duration of the trip in days (optional)",
+      "example": 14,
+      "nullable": true
+    }
+  },
+  "x-readme-ref-name": "CreateRouteRequest"
+}

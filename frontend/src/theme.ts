@@ -29,7 +29,7 @@ const aviPalette = {
   background: {
     light: '#f8f9fa',
     main: '#ffffff',
-  }
+  },
 };
 
 // Create the extended theme
@@ -63,7 +63,7 @@ const themeOptions: ThemeOptions = {
   },
   typography: {
     fontFamily: [
-      '"SF Pro Display"', 
+      '"SF Pro Display"',
       '"Helvetica Neue"',
       'Arial',
       'sans-serif',

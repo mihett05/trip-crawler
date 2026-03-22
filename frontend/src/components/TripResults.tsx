@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  Box,
-  CardContent,
-  Stack,
-  Typography,
-  Paper,
-  Avatar,
-} from '@mui/material';
+import { Box, CardContent, Stack, Typography, Paper, Avatar } from '@mui/material';
 import {
   Timeline,
   TimelineItem,
@@ -83,37 +76,37 @@ const TripResults: React.FC<TripResultsProps> = ({ tripData }) => {
   // Find the center of the map based on the route
   const getMapCenter = (): [number, number] => {
     if (tripData.route.length === 0) return [51.505, -0.09]; // Default to London if no route
-    
-    const lats = tripData.route.map(segment => segment.coordinates[0]);
-    const lngs = tripData.route.map(segment => segment.coordinates[1]);
-    
+
+    const lats = tripData.route.map((segment) => segment.coordinates[0]);
+    const lngs = tripData.route.map((segment) => segment.coordinates[1]);
+
     const avgLat = lats.reduce((sum, lat) => sum + lat, 0) / lats.length;
     const avgLng = lngs.reduce((sum, lng) => sum + lng, 0) / lngs.length;
-    
+
     return [avgLat, avgLng];
   };
 
   return (
     <Box sx={{ mt: 4 }}>
-      <Paper 
-        elevation={0} 
-        sx={{ 
-          p: 0, 
-          mb: 3, 
-          borderRadius: 2, 
+      <Paper
+        elevation={0}
+        sx={{
+          p: 0,
+          mb: 3,
+          borderRadius: 2,
           border: '1px solid',
           borderColor: 'divider',
           overflow: 'hidden',
-          boxShadow: 2
+          boxShadow: 2,
         }}
       >
-        <Stack 
-          direction={{ xs: 'column', md: 'row' }} 
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
           spacing={0}
-          sx={{ 
-            bgcolor: 'primary.main', 
+          sx={{
+            bgcolor: 'primary.main',
             color: 'white',
-            p: 3 
+            p: 3,
           }}
         >
           <Box sx={{ flex: 1 }}>
@@ -124,12 +117,12 @@ const TripResults: React.FC<TripResultsProps> = ({ tripData }) => {
               {tripData.totalDays} days journey • {tripData.totalDistance.toLocaleString()} km
             </Typography>
           </Box>
-          <Box 
-            sx={{ 
-              display: 'flex', 
+          <Box
+            sx={{
+              display: 'flex',
               alignItems: 'center',
               justifyContent: { xs: 'flex-start', md: 'flex-end' },
-              mt: { xs: 2, md: 0 }
+              mt: { xs: 2, md: 0 },
             }}
           >
             <Box sx={{ textAlign: 'right' }}>
@@ -142,97 +135,121 @@ const TripResults: React.FC<TripResultsProps> = ({ tripData }) => {
             </Box>
           </Box>
         </Stack>
-        
+
         <CardContent sx={{ p: 3, pt: 2 }}>
-          <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
+          <Typography
+            variant="h6"
+            gutterBottom
+            sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}
+          >
             Route Details
           </Typography>
-          
+
           <Timeline position="left" sx={{ p: 0, mb: 3 }}>
             {tripData.route.map((segment, index) => (
               <TimelineItem key={segment.id}>
                 <TimelineSeparator>
-                  <TimelineDot 
-                    variant={index === 0 || index === tripData.route.length - 1 ? 'filled' : 'outlined'} 
+                  <TimelineDot
+                    variant={
+                      index === 0 || index === tripData.route.length - 1 ? 'filled' : 'outlined'
+                    }
                     sx={{
                       ...(index === 0 && { bgcolor: 'success.main' }),
-                      ...(index === tripData.route.length - 1 && { bgcolor: 'error.main' }),
+                      ...(index === tripData.route.length - 1 && {
+                        bgcolor: 'error.main',
+                      }),
                     }}
                   />
                   {index < tripData.route.length - 1 && <TimelineConnector />}
                 </TimelineSeparator>
                 <TimelineContent>
-                  <Paper 
-                    elevation={0} 
-                    sx={{ 
-                      p: 2, 
-                      border: '1px solid', 
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      border: '1px solid',
                       borderColor: 'divider',
                       borderRadius: 2,
-                      bgcolor: 'background.paper'
+                      bgcolor: 'background.paper',
                     }}
                   >
                     <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                       <Box>
                         <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                          {segment.city} 
+                          {segment.city}
                           {index === 0 && (
-                            <Typography 
-                              component="span" 
-                              sx={{ 
-                                ml: 1, 
-                                px: 1, 
-                                py: 0.25, 
-                                bgcolor: 'success.light', 
+                            <Typography
+                              component="span"
+                              sx={{
+                                ml: 1,
+                                px: 1,
+                                py: 0.25,
+                                bgcolor: 'success.light',
                                 color: 'success.contrastText',
                                 borderRadius: 1,
                                 fontSize: '0.75rem',
-                                fontWeight: 600
+                                fontWeight: 600,
                               }}
                             >
                               START
                             </Typography>
                           )}
                           {index === tripData.route.length - 1 && (
-                            <Typography 
-                              component="span" 
-                              sx={{ 
-                                ml: 1, 
-                                px: 1, 
-                                py: 0.25, 
-                                bgcolor: 'error.light', 
+                            <Typography
+                              component="span"
+                              sx={{
+                                ml: 1,
+                                px: 1,
+                                py: 0.25,
+                                bgcolor: 'error.light',
                                 color: 'error.contrastText',
                                 borderRadius: 1,
                                 fontSize: '0.75rem',
-                                fontWeight: 600
+                                fontWeight: 600,
                               }}
                             >
                               END
                             </Typography>
                           )}
                         </Typography>
-                        
+
                         <Stack spacing={0.5} sx={{ mt: 1 }}>
                           <Typography variant="body2" color="text.secondary">
-                            <strong>Arrival:</strong> {new Date(segment.arrivalDate).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                            <strong>Arrival:</strong>{' '}
+                            {new Date(segment.arrivalDate).toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                            })}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            <strong>Departure:</strong> {new Date(segment.departureDate).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                            <strong>Departure:</strong>{' '}
+                            {new Date(segment.departureDate).toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                            })}
                           </Typography>
                           <Typography variant="body2" color="text.primary" sx={{ mt: 0.5 }}>
-                            <strong>Stay:</strong> {segment.duration} day{segment.duration !== 1 ? 's' : ''}
+                            <strong>Stay:</strong> {segment.duration} day
+                            {segment.duration !== 1 ? 's' : ''}
                           </Typography>
                         </Stack>
                       </Box>
-                      
-                      <Avatar 
-                        sx={{ 
-                          bgcolor: index === 0 ? 'success.main' : 
-                                   index === tripData.route.length - 1 ? 'error.main' : 
-                                   'primary.main',
+
+                      <Avatar
+                        sx={{
+                          bgcolor:
+                            index === 0
+                              ? 'success.main'
+                              : index === tripData.route.length - 1
+                                ? 'error.main'
+                                : 'primary.main',
                           width: 32,
                           height: 32,
-                          fontSize: '0.8rem'
+                          fontSize: '0.8rem',
                         }}
                       >
                         {index + 1}
@@ -247,49 +264,45 @@ const TripResults: React.FC<TripResultsProps> = ({ tripData }) => {
       </Paper>
 
       {/* Map Visualization */}
-      <Paper 
-        elevation={0} 
-        sx={{ 
-          borderRadius: 2, 
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: 2,
           border: '1px solid',
           borderColor: 'divider',
           overflow: 'hidden',
-          boxShadow: 2
+          boxShadow: 2,
         }}
       >
-        <Box sx={{ 
-          bgcolor: 'secondary.main', 
-          color: 'white', 
-          p: 2,
-          display: 'flex',
-          alignItems: 'center'
-        }}>
+        <Box
+          sx={{
+            bgcolor: 'secondary.main',
+            color: 'white',
+            p: 2,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
             Trip Route Map
           </Typography>
         </Box>
         <CardContent sx={{ height: 400, p: 0 }}>
-          <MapContainer 
-            center={getMapCenter()} 
-            zoom={5} 
-            style={{ height: '100%', width: '100%' }}
-          >
+          <MapContainer center={getMapCenter()} zoom={5} style={{ height: '100%', width: '100%' }}>
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            
+
             {/* Render markers for each city in the route */}
             {tripData.route.map((segment) => (
-              <Marker 
-                key={segment.id} 
-                position={segment.coordinates} 
-                icon={customIcon}
-              >
+              <Marker key={segment.id} position={segment.coordinates} icon={customIcon}>
                 <Popup>
                   <div>
-                    <strong>{segment.city}</strong><br />
-                    Arrive: {new Date(segment.arrivalDate).toLocaleDateString()}<br />
+                    <strong>{segment.city}</strong>
+                    <br />
+                    Arrive: {new Date(segment.arrivalDate).toLocaleDateString()}
+                    <br />
                     Depart: {new Date(segment.departureDate).toLocaleDateString()}
                   </div>
                 </Popup>

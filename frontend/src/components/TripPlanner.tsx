@@ -24,9 +24,14 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { Autocomplete } from '@mui/material';
 import { SwapHoriz as SwapIcon } from '@mui/icons-material';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { fetchCitySuggestions, generateTripRoute } from '../services/api';
+import { useQuery } from '@tanstack/react-query';
+import {
+  fetchCitySuggestions,
+  convertFormDataToApiRequest,
+  convertApiToTripDetails,
+} from '../services/api';
 import TripResults from './TripResults';
+import { useCreateRoute } from '../gen';
 
 interface TripSegment {
   id: number;
@@ -90,21 +95,18 @@ const TripPlanner: React.FC = () => {
     enabled: currentMiddleCity.length > 1,
   });
 
-  // Mutation for generating trip route
-  const generateTripMutation = useMutation({
-    mutationFn: generateTripRoute,
-    onSuccess: (data) => {
-      setTripResult(data);
-      setShowResults(true);
-    },
-  });
+  // Mutation for creating trip route via API
+  const generateTripMutation = useCreateRoute();
 
-  const handleInputChange = (field: keyof TripFormData, value: string | number | Date | null | string[]) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    
+  const handleInputChange = (
+    field: keyof TripFormData,
+    value: string | number | Date | null | string[],
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+
     // Clear error when field is changed
     if (errors[field]) {
-      setErrors(prev => {
+      setErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors[field];
         return newErrors;
@@ -114,7 +116,7 @@ const TripPlanner: React.FC = () => {
 
   const handleSwapCities = () => {
     const temp = formData.departureCity;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       departureCity: prev.destinationCity,
       destinationCity: temp,
@@ -123,7 +125,7 @@ const TripPlanner: React.FC = () => {
 
   const handleAddMiddleCity = () => {
     if (currentMiddleCity.trim() && formData.middleCities.length < 3) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         middleCities: [...prev.middleCities, currentMiddleCity],
       }));
@@ -132,7 +134,7 @@ const TripPlanner: React.FC = () => {
   };
 
   const handleRemoveMiddleCity = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       middleCities: prev.middleCities.filter((_, i) => i !== index),
     }));
@@ -164,7 +166,12 @@ const TripPlanner: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      generateTripMutation.mutate(formData);
+      const apiRequest = convertFormDataToApiRequest(formData);
+      generateTripMutation.mutateAsync({ data: apiRequest }).then((resp) => {
+        const tripDetails = convertApiToTripDetails(resp, formData);
+        setTripResult(tripDetails);
+        setShowResults(true);
+      });
     }
   };
 
@@ -176,35 +183,31 @@ const TripPlanner: React.FC = () => {
   if (showResults && tripResult) {
     return (
       <Box sx={{ maxWidth: 1000, mx: 'auto', mt: 4, px: 2 }}>
-        <Paper 
-          elevation={0} 
-          sx={{ 
-            p: 3, 
-            mb: 3, 
-            borderRadius: 2, 
+        <Paper
+          elevation={0}
+          sx={{
+            p: 3,
+            mb: 3,
+            borderRadius: 2,
             bgcolor: 'background.paper',
-            boxShadow: 1
+            boxShadow: 1,
           }}
         >
-          <Typography 
-            variant="h4" 
-            component="h1" 
-            align="center" 
+          <Typography
+            variant="h4"
+            component="h1"
+            align="center"
             gutterBottom
             sx={{ fontWeight: 600, color: 'primary.main' }}
           >
             Your Trip Plan
           </Typography>
         </Paper>
-        
+
         <TripResults tripData={tripResult} />
-        
+
         <Box sx={{ textAlign: 'center', mt: 3 }}>
-          <Button
-            variant="outlined"
-            onClick={handleNewTrip}
-            sx={{ mt: 2, px: 4, py: 1.2 }}
-          >
+          <Button variant="outlined" onClick={handleNewTrip} sx={{ mt: 2, px: 4, py: 1.2 }}>
             Plan Another Trip
           </Button>
         </Box>
@@ -215,57 +218,64 @@ const TripPlanner: React.FC = () => {
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box sx={{ maxWidth: 1000, mx: 'auto', mt: 4, px: 2 }}>
-        <Paper 
-          elevation={0} 
-          sx={{ 
-            p: 3, 
-            mb: 3, 
-            borderRadius: 2, 
+        <Paper
+          elevation={0}
+          sx={{
+            p: 3,
+            mb: 3,
+            borderRadius: 2,
             bgcolor: 'background.paper',
-            boxShadow: 1
+            boxShadow: 1,
           }}
         >
-          <Typography 
-            variant="h4" 
-            component="h1" 
-            align="center" 
+          <Typography
+            variant="h4"
+            component="h1"
+            align="center"
             gutterBottom
             sx={{ fontWeight: 600, color: 'primary.main' }}
           >
             Plan Your Dream Trip
           </Typography>
-          <Typography 
-            variant="body1" 
-            align="center" 
-            color="textSecondary"
-            sx={{ mb: 1 }}
-          >
+          <Typography variant="body1" align="center" color="textSecondary" sx={{ mb: 1 }}>
             Discover amazing destinations and create unforgettable memories
           </Typography>
         </Paper>
-        
-        <Card 
-          elevation={0} 
-          sx={{ 
-            borderRadius: 2, 
-            border: '1px solid', 
+
+        <Card
+          elevation={0}
+          sx={{
+            borderRadius: 2,
+            border: '1px solid',
             borderColor: 'divider',
             overflow: 'visible',
-            boxShadow: 2
+            boxShadow: 2,
           }}
         >
           <CardContent sx={{ pb: 2 }}>
             <form onSubmit={handleSubmit}>
-                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: 'center', gap: 2, width: '100%' }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: { xs: 'column', md: 'row' },
+                  alignItems: 'center',
+                  gap: 2,
+                  width: '100%',
+                }}
+              >
                 {/* Departure City */}
                 <Box sx={{ flex: 5, width: '100%' }}>
                   <Autocomplete
                     freeSolo
                     options={departureSuggestions}
                     value={formData.departureCity}
-                    onChange={(_event, newValue) => handleInputChange('departureCity', newValue || '')}
+                    onChange={(_event, newValue) =>
+                      handleInputChange('departureCity', newValue || '')
+                    }
                     inputValue={formData.departureCity}
-                    onInputChange={(_event, newInputValue) => handleInputChange('departureCity', newInputValue)}
+                    onInputChange={(_event, newInputValue) =>
+                      handleInputChange('departureCity', newInputValue)
+                    }
                     renderInput={(params) => (
                       <TextField
                         {...params}
@@ -275,50 +285,61 @@ const TripPlanner: React.FC = () => {
                         fullWidth
                         InputProps={{
                           ...params.InputProps,
-                          sx: { 
-                            fontSize: '1.1rem', 
+                          sx: {
+                            fontSize: '1.1rem',
                             fontWeight: 500,
-                            pl: 1
-                          }
+                            pl: 1,
+                          },
                         }}
                         InputLabelProps={{
                           sx: {
                             fontSize: '0.9rem',
-                            fontWeight: 600
-                          }
+                            fontWeight: 600,
+                          },
                         }}
                       />
                     )}
                   />
                 </Box>
-                
+
                 {/* Swap Button */}
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 2 }}>
-                  <IconButton 
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    flex: 2,
+                  }}
+                >
+                  <IconButton
                     onClick={handleSwapCities}
-                    sx={{ 
-                      bgcolor: 'primary.main', 
+                    sx={{
+                      bgcolor: 'primary.main',
                       color: 'white',
                       width: 40,
                       height: 40,
                       '&:hover': {
-                        bgcolor: 'primary.dark'
-                      }
+                        bgcolor: 'primary.dark',
+                      },
                     }}
                   >
                     <SwapIcon />
                   </IconButton>
                 </Box>
-                
+
                 {/* Destination City */}
                 <Box sx={{ flex: 5, width: '100%' }}>
                   <Autocomplete
                     freeSolo
                     options={destinationSuggestions}
                     value={formData.destinationCity}
-                    onChange={(_event, newValue) => handleInputChange('destinationCity', newValue || '')}
+                    onChange={(_event, newValue) =>
+                      handleInputChange('destinationCity', newValue || '')
+                    }
                     inputValue={formData.destinationCity}
-                    onInputChange={(_event, newInputValue) => handleInputChange('destinationCity', newInputValue)}
+                    onInputChange={(_event, newInputValue) =>
+                      handleInputChange('destinationCity', newInputValue)
+                    }
                     renderInput={(params) => (
                       <TextField
                         {...params}
@@ -328,37 +349,43 @@ const TripPlanner: React.FC = () => {
                         fullWidth
                         InputProps={{
                           ...params.InputProps,
-                          sx: { 
-                            fontSize: '1.1rem', 
+                          sx: {
+                            fontSize: '1.1rem',
                             fontWeight: 500,
-                            pl: 1
-                          }
+                            pl: 1,
+                          },
                         }}
                         InputLabelProps={{
                           sx: {
                             fontSize: '0.9rem',
-                            fontWeight: 600
-                          }
+                            fontWeight: 600,
+                          },
                         }}
                       />
                     )}
                   />
                 </Box>
               </Box>
-              
+
               {/* Middle Cities */}
               <Box sx={{ mt: 3 }}>
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 1.5 }}>
                   Stopover Cities (up to 3)
                 </Typography>
-                
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="flex-start" mb={1}>
+
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={1}
+                  alignItems="flex-start"
+                  mb={1}
+                >
                   <Autocomplete
                     freeSolo
-                    options={middleCitySuggestions.filter(city => 
-                      !formData.middleCities.includes(city) &&
-                      city !== formData.departureCity &&
-                      city !== formData.destinationCity
+                    options={middleCitySuggestions.filter(
+                      (city) =>
+                        !formData.middleCities.includes(city) &&
+                        city !== formData.departureCity &&
+                        city !== formData.destinationCity,
                     )}
                     value={currentMiddleCity}
                     onChange={(_event, newValue) => setCurrentMiddleCity(newValue || '')}
@@ -372,7 +399,7 @@ const TripPlanner: React.FC = () => {
                         fullWidth
                         InputProps={{
                           ...params.InputProps,
-                          sx: { pl: 1 }
+                          sx: { pl: 1 },
                         }}
                       />
                     )}
@@ -386,7 +413,7 @@ const TripPlanner: React.FC = () => {
                     Add
                   </Button>
                 </Stack>
-                
+
                 {formData.middleCities.length > 0 && (
                   <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
                     {formData.middleCities.map((city, index) => (
@@ -401,16 +428,23 @@ const TripPlanner: React.FC = () => {
                     ))}
                   </Stack>
                 )}
-                
+
                 <FormHelperText sx={{ ml: 0, mt: 1 }}>
                   {formData.middleCities.length}/3 cities added
                 </FormHelperText>
               </Box>
-              
+
               <Divider sx={{ my: 3 }} />
-              
+
               {/* Dates and Duration */}
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2, mb: 2 }}>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                  gap: 2,
+                  mb: 2,
+                }}
+              >
                 <Box>
                   <Box>
                     <DatePicker
@@ -425,23 +459,25 @@ const TripPlanner: React.FC = () => {
                           fullWidth: true,
                         },
                         actionBar: {
-                          actions: ['today', 'accept']
-                        }
+                          actions: ['today', 'accept'],
+                        },
                       }}
                       sx={{
                         width: '100%',
                         '& .MuiInputBase-input': {
                           py: 1.2,
                           px: 1.5,
-                        }
+                        },
                       }}
                     />
                   </Box>
                 </Box>
-                
+
                 <Box>
                   <FormControl fullWidth error={!!errors.tripDuration}>
-                    <InputLabel id="duration-select-label" sx={{ fontWeight: 600 }}>Trip Length</InputLabel>
+                    <InputLabel id="duration-select-label" sx={{ fontWeight: 600 }}>
+                      Trip Length
+                    </InputLabel>
                     <Select
                       labelId="duration-select-label"
                       value={formData.tripDuration}
@@ -451,8 +487,8 @@ const TripPlanner: React.FC = () => {
                         py: 1.2,
                         px: 1.5,
                         '& .MuiTypography-root': {
-                          fontWeight: 500
-                        }
+                          fontWeight: 500,
+                        },
                       }}
                     >
                       {[...Array(30)].map((_, i) => (
@@ -461,13 +497,11 @@ const TripPlanner: React.FC = () => {
                         </MenuItem>
                       ))}
                     </Select>
-                    {errors.tripDuration && (
-                      <FormHelperText>{errors.tripDuration}</FormHelperText>
-                    )}
+                    {errors.tripDuration && <FormHelperText>{errors.tripDuration}</FormHelperText>}
                   </FormControl>
                 </Box>
               </Box>
-              
+
               {/* Submit Button */}
               <CardActions sx={{ justifyContent: 'center', pt: 1, pb: 0 }}>
                 <Button
@@ -475,16 +509,16 @@ const TripPlanner: React.FC = () => {
                   variant="contained"
                   size="large"
                   disabled={generateTripMutation.isPending}
-                  sx={{ 
-                    px: 6, 
-                    py: 1.5, 
+                  sx={{
+                    px: 6,
+                    py: 1.5,
                     minWidth: 220,
                     fontSize: '1.1rem',
                     fontWeight: 600,
                     boxShadow: 2,
                     '&:hover': {
-                      boxShadow: 3
-                    }
+                      boxShadow: 3,
+                    },
                   }}
                   startIcon={generateTripMutation.isPending ? <CircularProgress size={20} /> : null}
                 >

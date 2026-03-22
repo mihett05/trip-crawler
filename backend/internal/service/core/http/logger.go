@@ -17,22 +17,23 @@ func ZapLogger(logger *zap.Logger) func(http.Handler) http.Handler {
 
 			defer func() {
 				requestLogger := logger.With(
+					zap.String("method", r.Method),
 					zap.Int("status", writer.Status()),
 					zap.String("path", r.URL.Path),
 					zap.String("request_id", middleware.GetReqID(r.Context())),
 					zap.Duration("latency", time.Since(start)),
-					zap.Int("size", writer.BytesWritten()),
+					zap.Int("response_size", writer.BytesWritten()),
 				)
 				if writer.Status() >= http.StatusInternalServerError {
 					var buffer bytes.Buffer
 					writer.Tee(&buffer)
 
 					requestLogger.Error(
-						"failed to process http request",
+						"error",
 						zap.String("response", buffer.String()),
 					)
 				} else {
-					requestLogger.Info("processed http request")
+					requestLogger.Info("request")
 				}
 			}()
 

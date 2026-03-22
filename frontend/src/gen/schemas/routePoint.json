@@ -1,0 +1,39 @@
+{
+  "type": "object",
+  "required": ["name", "startTimestamp", "endTimestamp"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the route point/destination",
+      "example": "Rome"
+    },
+    "coordinates": {
+      "type": "object",
+      "required": ["longitude", "latitude"],
+      "properties": {
+        "longitude": { "type": "number", "format": "double" },
+        "latitude": { "type": "number", "format": "double" }
+      },
+      "x-readme-ref-name": "Coordinates"
+    },
+    "startTimestamp": {
+      "type": "integer",
+      "format": "int64",
+      "description": "Unix timestamp for the start of this point in the route",
+      "example": 1705276800
+    },
+    "endTimestamp": {
+      "type": "integer",
+      "format": "int64",
+      "description": "Unix timestamp for the end of this point in the route",
+      "example": 1705622400
+    },
+    "details": {
+      "type": "string",
+      "description": "Additional details about this route point",
+      "example": "Historical sites to visit in Rome",
+      "nullable": true
+    }
+  },
+  "x-readme-ref-name": "RoutePoint"
+}

@@ -1,8 +1,8 @@
 type: object
 required:
   - points
-  - start_date
-  - duration_min_days
+  - startDate
+  - durationMinDays
 properties:
   points:
     type: array
@@ -11,17 +11,17 @@ properties:
     description: List of destination points for the route
     minItems: 1
     example: ["Rome", "Paris", "London"]
-  start_date:
+  startDate:
     type: string
     format: date
     description: Start date for the trip in YYYY-MM-DD format
     example: "2024-01-15"
-  duration_min_days:
+  durationMinDays:
     type: integer
     minimum: 1
     description: Minimum duration of the trip in days
     example: 7
-  duration_max_days:
+  durationMaxDays:
     type: integer
     minimum: 1
     description: Maximum duration of the trip in days (optional)
