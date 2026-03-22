@@ -1,50 +1,49 @@
-/v1/routes:
-  post:
-    tags:
-      - Routes
-    summary: Create a new travel route
-    description: Creates a new travel route with specified points and duration parameters
-    operationId: createRoute
-    requestBody:
-      required: true
+post:
+  tags:
+    - Routes
+  summary: Create a new travel route
+  description: Creates a new travel route with specified points and duration parameters
+  operationId: createRoute
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: "../components/schemas/CreateRouteRequest.yaml"
+        example:
+          points:
+            - Rome
+            - Paris
+            - London
+          startDate: "2024-01-15"
+          durationMinDays: 7
+          durationMaxDays: 14
+  responses:
+    "200":
+      description: Route created successfully
       content:
         application/json:
           schema:
-            $ref: "../components/schemas/CreateRouteRequest.yaml"
+            $ref: "../components/schemas/CreateRouteResponse.yaml"
           example:
             points:
-              - Rome
-              - Paris
-              - London
-            startDate: "2024-01-15"
-            durationMinDays: 7
-            durationMaxDays: 14
-    responses:
-      "200":
-        description: Route created successfully
-        content:
-          application/json:
-            schema:
-              $ref: "../components/schemas/CreateRouteResponse.yaml"
-            example:
-              points:
-                - name: Rome
-                  startTimestamp: 1705276800
-                  endTimestamp: 1705622400
-                  details: Details about Rome stay
-                - name: Paris
-                  startTimestamp: 1705622400
-                  endTimestamp: 1706227200
-                  details: Details about Paris stay
-      "400":
-        description: Bad request - invalid input parameters
-        content:
-          application/json:
-            schema:
-              $ref: "../components/schemas/Error.yaml"
-      "500":
-        description: Internal server error
-        content:
-          application/json:
-            schema:
-              $ref: "../components/schemas/Error.yaml"
+              - name: Rome
+                startTimestamp: 1705276800
+                endTimestamp: 1705622400
+                details: Details about Rome stay
+              - name: Paris
+                startTimestamp: 1705622400
+                endTimestamp: 1706227200
+                details: Details about Paris stay
+    "400":
+      description: Bad request - invalid input parameters
+      content:
+        application/json:
+          schema:
+            $ref: "../components/schemas/Error.yaml"
+    "500":
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "../components/schemas/Error.yaml"

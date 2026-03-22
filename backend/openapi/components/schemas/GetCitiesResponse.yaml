@@ -1,0 +1,12 @@
+type: object
+required:
+  - points
+description: List of cities for the hinting
+properties:
+  cities:
+    type: array
+    items:
+      type: string
+    description: List of cities for the route
+    minItems: 0
+    example: ["Rome", "Paris", "London"]

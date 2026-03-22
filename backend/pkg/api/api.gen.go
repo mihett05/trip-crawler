@@ -74,6 +74,12 @@ type Error struct {
 // ErrorCode Error code
 type ErrorCode string
 
+// GetCitiesResponse List of cities for the hinting
+type GetCitiesResponse struct {
+	// Cities List of cities for the route
+	Cities *[]string `json:"cities,omitempty"`
+}
+
 // RoutePoint defines model for RoutePoint.
 type RoutePoint struct {
 	Coordinates *Coordinates `json:"coordinates,omitempty"`
@@ -96,6 +102,9 @@ type CreateRouteJSONRequestBody = CreateRouteRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Get cities
+	// (GET /v1/cities)
+	GetCities(w http.ResponseWriter, r *http.Request)
 	// Create a new travel route
 	// (POST /v1/routes)
 	CreateRoute(w http.ResponseWriter, r *http.Request)
@@ -104,6 +113,12 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// Get cities
+// (GET /v1/cities)
+func (_ Unimplemented) GetCities(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // Create a new travel route
 // (POST /v1/routes)
@@ -119,6 +134,20 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// GetCities operation middleware
+func (siw *ServerInterfaceWrapper) GetCities(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCities(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // CreateRoute operation middleware
 func (siw *ServerInterfaceWrapper) CreateRoute(w http.ResponseWriter, r *http.Request) {
@@ -248,6 +277,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/v1/cities", wrapper.GetCities)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/v1/routes", wrapper.CreateRoute)
 	})
 
@@ -257,26 +289,27 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/7xWW2/jNhP9KwS/76EFlPiy2STQW3adogaSbOBmCwRBsJiIY5sLitSSIydG4P9ekJRs",
-	"yVJufeibLV7mzMw5Z/jMM5MXRqMmx9Nn7rIl5hB+fjXGCqmBMPwtrCnQkoz/FJCkUqD/PTc2B+IpF6Z8",
-	"UMgTTusCecp1mT+g5ZuEK6MX79+/SbjFX6W0KHh61zic7OLeb0+Zh5+YkY/y1SIQzkxJOMNfJTrqAhel",
-	"BZJGX8LTBNbxE7rMysJ/5Sm/hCeZlzmrNzIzZ7RERlYWTGomYO3YbyZsB/U7Tzg+QV4o5OnoKOG51P44",
-	"T0cJ16VS4DNMyZa4BSw14SLWZYtG6hfQxOteRdOEcNJG0I1YGFm1uh3oQjrylwt05JvuY8W9bG5siGl9",
-	"YZvB7vjM5P7LNVjpYVwYLYz2vZGEeYhSIXBkpV54ALnU07i4wwfWwtovOgJLEyDsAvzLLzEBhFtAdRFu",
-	"b29vDy4vDyYTVnGrAZKPh+Ojg+HoYPSZJw3uATWYV8PbY15VrCaubs/eZKIrjHY9Gc3QlSoUPVTWsUKB",
-	"1h5HskfaXdO2df2/xTlP+f8GO/0OKvEOQtxrf8Zjade4P8O+HM6tNbYroMyInlzCZhbWEo7a0++OT6/+",
-	"PruYTn5Mr66/3/CET69uzmdXZxc/zmezb7NG0AY70DlY9AT4o1SKYYhS73mrexWaentfjo1K9STa8r/X",
-	"Ct60Sq9qJJCqR2RnQsjoG6zaw+DBlMRoKV1kQRRdi8B/SkfGygwUc9LzhAxbSSfJc79S4AtWsyssanEj",
-	"c3QEedEF9l3LJ0b1+lZgqEU0HOkiLh+x1wpGJ8PPx+Px0XDY0JjUdHzE+1xIQ97T4yvIsTa4RjEGDU9q",
-	"FabKvZNrUOvHsw3HPpDv+OT49F357vEyJN9BudeiLlv9NVLPTQ+trqchicy7jtQLRhZWqGpbeVgzV2Am",
-	"52u/FhWfBCd1CQMttsPFz1eZYWVWsUecJ7y0iqd8SVSkg4EyGailcZSenp6eBoORFNpx4+34q4VHhZad",
-	"XU95wldoXcQ4OhweDv1uU6CGQvKUfzocHn7yXge0DGIZrEaDiDmaXpzf7VyjszoGTONjK1H2KGlZZSpR",
-	"1NOrmSArwEKOhNabuhd7+DwV24tnVaNtfD98MWIdvUATRpOAolAyC+cGP53H9LyjRc/7wj8KOmP+ZDeI",
-	"XxmijWnYnGKe4cF43rSl7nto0yajN4vwIc6oUPfxcPixlLeZPO+cj09a/uZT9Ppa79O8ZRwV46p67Kt4",
-	"J7lN8nKkUMUXQx2PxyfjRqi65n2xIqrN/b8rdzX0Q733xn4ga9AqCubKLEPn5qVS4QV09K7qvw9QnOA9",
-	"EL6AYBXD2QGTegVKCiZ1UVJTIpuEf/4v4Ew1ofVD0aFdoY1jPtimK/Mc7Horzx7Ze7+FRSWk4B33IUS8",
-	"q6Zl66nrHYwJXKEyRY6aqrhvOd39NtL+jd9qJ3HMogp9JVO5UjRlo4MR5aBhgT4mb9A9oN7cb/4JAAD/",
-	"/4gI52mNDQAA",
+	"H4sIAAAAAAAC/8xWbW/jNgz+KwK3DxvgNi/XN/hbr+luAdpekesNKIrgoNpMooMs+SQ6bVDkvw+S7MSJ",
+	"nTa9DcO+JRYlPiQfPuQLJDrLtUJFFuIXsMkMM+5/XmhtUqE4of+bG52jIRH+SU6CihTd74k2GSeIIdXF",
+	"o0SIgBY5QgyqyB7RwDICqdV0f/tlBAZ/FMJgCvFD7XK09jte3dKP3zEh5+XCICcc6YJwhD8KtNQEnhaG",
+	"k9Dqmj8P+CJ8QpsYkbuvEMM1fxZZkbHKkOkJoxkyMiJnQrGULyz7TXtzLn+HCPCZZ7lEiHtHEWRCuesQ",
+	"9yJQhZTcRRiTKXAFWCjCacjLCo1QO9CE515FU4dwuomg6THXoiz1pqMrYck9nqIlV3TnK9iyiTbep3GJ",
+	"rTt7gJHO3JdbboSDcaVVqpWrjSDMvJcSgSUj1NQByIQahsM1Pm4MX7hDS9zQgBM2AX5xRyzlhCtAVRLu",
+	"7+/vD66vDwYDVnKrBhL63f7RQbd30DuGqMY9TjXmVfC2mFcmq46rWbM3mWhzrWxLRCO0hfRJ95m1LJdc",
+	"KYcj2iLtumirvP5qcAIx/NJZ92+nbN6O93vr7jgsmzluj7AthktjtGk2UKLTlli8MfNnEaBy9HuA4c1f",
+	"51fDwbfhze3XO4hgeHN3Obo5v/p2ORp9HtWc1tiB1vJpi4M/CikZei+VzVvVK9FU5m0xfkK6EC6y3VWq",
+	"GiPxdivuzYSitlIFs72f+Xd66mdLXCNKS5035P81vtUnhRM1JC5kSw7O01QE2WSlDeOPuiBGM2FDKoLm",
+	"bPTvn8KSNiLhklnh2oQ0mwsryLV+mawdSrvOEKr0TmRoiWd5E9hXJZ4ZVeer4qBKg94KG3A5j61V6512",
+	"j0/6/aNutyYxQtHJEbSJsOJZC9NueIaVvteS0alJ8kZiytgbsXqxen+0/to74u2fnpztFe8WH33wDZRb",
+	"JWqy1T0j1ES30Op26INInOgKNWVk+BxlpaqPC2ZzTMRk4c5CN0R+kNiIcZWuZqtbL0SCpQqEGgFEUBgJ",
+	"McyI8rjTkTrhcqYtxWdnZ2e++QT5cty5aXRh+JNEw85vhxDBHI0NGHuH3cOus9Y5Kp4LiOHDYffwg9MP",
+	"TjPfLJ15r7OWjylSM9RPSIzPuXBkp1JLwD8aQhimweiiOjGlrvkn+91u6GxFGFqe57kUib/a+W6di5d1",
+	"kddi1hCla20T/QRjxzYvAm9JRFNofUHbNbKKEKsIlxEc74V9PzBhsrUAGCpC4+TJopmjCfPGE9gWWcbN",
+	"oizBKvHEpz49X8jjsDB2xq6QgXxheNuWSoYNwTLOFD5tMJY9CZqVlBWYVltYnaks54ZnSGia1a+tHhAa",
+	"Dy191OnifaVv7MluuW2sq6frhfKVwVXb6urb2N7kadnrl5uq4lR/+U/ZvorkZT3CYLAxqFyITigX23q1",
+	"MQFK6SjzsS3Ha+1cRrs9+SzudHXS75/2a66qnLf5CqiW459L9+5u9QZBdDFltkgStHZSSOk3+aP/ol8/",
+	"8pSVDGcHTKg5lyJlQuUF1Vvk/yQfIbktbV9Tk1HQjrF3Ed6qaLkhl24UsRTnKHWeoaLS71sja7zytP3i",
+	"50pJLDMofV1Jl6oUpqtWXogyrvgUnU+o0d2jXo6XfwcAAP//f3pW9VUQAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

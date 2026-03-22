@@ -11,7 +11,10 @@ servers:
     description: Local development server
 security: []
 paths:
-  $ref: "./paths/v1.routes.yaml"
+  /v1/routes:
+    $ref: "./paths/v1.routes.yaml"
+  /v1/cities:
+    $ref: "./paths/v1.cities.yaml"
 components:
   schemas:
     CreateRouteRequest:

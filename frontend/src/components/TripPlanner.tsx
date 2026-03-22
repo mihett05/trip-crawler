@@ -25,6 +25,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { Autocomplete } from '@mui/material';
 import { SwapHoriz as SwapIcon } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import {
   fetchCitySuggestions,
   convertFormDataToApiRequest,
@@ -61,6 +62,7 @@ interface TripFormData {
 }
 
 const TripPlanner: React.FC = () => {
+  const { t } = useTranslation(); // Добавляем использование хука перевода
   const [formData, setFormData] = useState<TripFormData>({
     departureCity: '',
     middleCities: [],
@@ -144,19 +146,19 @@ const TripPlanner: React.FC = () => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.departureCity.trim()) {
-      newErrors.departureCity = 'Starting city is required';
+      newErrors.departureCity = t('startingCityRequired');
     }
 
     if (!formData.destinationCity.trim()) {
-      newErrors.destinationCity = 'Destination city is required';
+      newErrors.destinationCity = t('destinationCityRequired');
     }
 
     if (!formData.startDate) {
-      newErrors.startDate = 'Start date is required';
+      newErrors.startDate = t('startDateRequired');
     }
 
     if (formData.tripDuration <= 0) {
-      newErrors.tripDuration = 'Trip duration must be at least 1 day';
+      newErrors.tripDuration = t('tripDurationMin');
     }
 
     setErrors(newErrors);
@@ -200,7 +202,7 @@ const TripPlanner: React.FC = () => {
             gutterBottom
             sx={{ fontWeight: 600, color: 'primary.main' }}
           >
-            Your Trip Plan
+            {t('yourTripPlan')}
           </Typography>
         </Paper>
 
@@ -208,7 +210,7 @@ const TripPlanner: React.FC = () => {
 
         <Box sx={{ textAlign: 'center', mt: 3 }}>
           <Button variant="outlined" onClick={handleNewTrip} sx={{ mt: 2, px: 4, py: 1.2 }}>
-            Plan Another Trip
+            {t('planAnotherTrip')}
           </Button>
         </Box>
       </Box>
@@ -235,10 +237,10 @@ const TripPlanner: React.FC = () => {
             gutterBottom
             sx={{ fontWeight: 600, color: 'primary.main' }}
           >
-            Plan Your Dream Trip
+            {t('appTitle')}
           </Typography>
           <Typography variant="body1" align="center" color="textSecondary" sx={{ mb: 1 }}>
-            Discover amazing destinations and create unforgettable memories
+            {t('appSubtitle')}
           </Typography>
         </Paper>
 
@@ -279,9 +281,9 @@ const TripPlanner: React.FC = () => {
                     renderInput={(params) => (
                       <TextField
                         {...params}
-                        label="From"
+                        label={t('from')}
                         error={!!errors.departureCity}
-                        helperText={errors.departureCity}
+                        helperText={errors.departureCity || ''}
                         fullWidth
                         InputProps={{
                           ...params.InputProps,
@@ -343,9 +345,9 @@ const TripPlanner: React.FC = () => {
                     renderInput={(params) => (
                       <TextField
                         {...params}
-                        label="To"
+                        label={t('to')}
                         error={!!errors.destinationCity}
-                        helperText={errors.destinationCity}
+                        helperText={errors.destinationCity || ''}
                         fullWidth
                         InputProps={{
                           ...params.InputProps,
@@ -370,7 +372,7 @@ const TripPlanner: React.FC = () => {
               {/* Middle Cities */}
               <Box sx={{ mt: 3 }}>
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 1.5 }}>
-                  Stopover Cities (up to 3)
+                  {t('stopoverCities')}
                 </Typography>
 
                 <Stack
@@ -395,7 +397,7 @@ const TripPlanner: React.FC = () => {
                     renderInput={(params) => (
                       <TextField
                         {...params}
-                        label="Add Stopover City"
+                        label={t('addStopoverCity')}
                         fullWidth
                         InputProps={{
                           ...params.InputProps,
@@ -410,7 +412,7 @@ const TripPlanner: React.FC = () => {
                     disabled={currentMiddleCity.trim() === '' || formData.middleCities.length >= 3}
                     sx={{ mt: { xs: 1, sm: 2.5 }, px: 2 }}
                   >
-                    Add
+                    {t('add')}
                   </Button>
                 </Stack>
 
@@ -430,7 +432,7 @@ const TripPlanner: React.FC = () => {
                 )}
 
                 <FormHelperText sx={{ ml: 0, mt: 1 }}>
-                  {formData.middleCities.length}/3 cities added
+                  {t('citiesAdded', { count: formData.middleCities.length })}
                 </FormHelperText>
               </Box>
 
@@ -448,14 +450,14 @@ const TripPlanner: React.FC = () => {
                 <Box>
                   <Box>
                     <DatePicker
-                      label="Departure Date"
+                      label={t('departureDate')}
                       value={formData.startDate}
                       onChange={(newValue) => handleInputChange('startDate', newValue)}
                       minDate={new Date()}
                       slotProps={{
                         textField: {
                           error: !!errors.startDate,
-                          helperText: errors.startDate,
+                          helperText: errors.startDate || '',
                           fullWidth: true,
                         },
                         actionBar: {
@@ -476,12 +478,12 @@ const TripPlanner: React.FC = () => {
                 <Box>
                   <FormControl fullWidth error={!!errors.tripDuration}>
                     <InputLabel id="duration-select-label" sx={{ fontWeight: 600 }}>
-                      Trip Length
+                      {t('tripLength')}
                     </InputLabel>
                     <Select
                       labelId="duration-select-label"
                       value={formData.tripDuration}
-                      label="Trip Length"
+                      label={t('tripLength')}
                       onChange={(e) => handleInputChange('tripDuration', Number(e.target.value))}
                       sx={{
                         py: 1.2,
@@ -493,7 +495,7 @@ const TripPlanner: React.FC = () => {
                     >
                       {[...Array(30)].map((_, i) => (
                         <MenuItem key={i + 1} value={i + 1}>
-                          {i + 1} day{i + 1 > 1 ? 's' : ''}
+                          {t('days', { count: i + 1, plural: i + 1 !== 1 ? '' : '' })}
                         </MenuItem>
                       ))}
                     </Select>
@@ -522,7 +524,7 @@ const TripPlanner: React.FC = () => {
                   }}
                   startIcon={generateTripMutation.isPending ? <CircularProgress size={20} /> : null}
                 >
-                  {generateTripMutation.isPending ? 'Planning...' : 'Find Trips'}
+                  {generateTripMutation.isPending ? t('planning') : t('findTrips')}
                 </Button>
               </CardActions>
             </form>

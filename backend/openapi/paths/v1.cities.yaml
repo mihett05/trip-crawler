@@ -1,0 +1,24 @@
+get:
+  tags:
+    - Stations
+  summary: Get cities
+  description: Get availablt cities
+  operationId: getCities
+  responses:
+    "200":
+      description: List of available cities
+      content:
+        application/json:
+          schema:
+            $ref: "../components/schemas/GetCitiesResponse.yaml"
+          example:
+            cities:
+              - Rome
+              - Paris
+              - Moscow
+    "500":
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "../components/schemas/Error.yaml"

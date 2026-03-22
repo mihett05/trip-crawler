@@ -64,6 +64,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /v1/cities:
+    get:
+      tags:
+        - Stations
+      summary: Get cities
+      description: Get availablt cities
+      operationId: getCities
+      responses:
+        '200':
+          description: List of available cities
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetCitiesResponse'
+              example:
+                cities:
+                  - Rome
+                  - Paris
+                  - Moscow
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 components:
   schemas:
     CreateRouteRequest:
@@ -164,3 +189,19 @@ components:
         latitude:
           type: number
           format: double
+    GetCitiesResponse:
+      type: object
+      required:
+        - points
+      description: List of cities for the hinting
+      properties:
+        cities:
+          type: array
+          items:
+            type: string
+          description: List of cities for the route
+          minItems: 0
+          example:
+            - Rome
+            - Paris
+            - London
