@@ -1,0 +1,27 @@
+openapi: 3.0.3
+info:
+  title: Trip Crawler API
+  description: API for creating travel routes by specifying points, dates, and duration
+  version: 1.0.0
+  license:
+    name: ""
+    url: "http://localhost:8888"
+servers:
+  - url: http://localhost:8888
+    description: Local development server
+security: []
+paths:
+  $ref: "./paths/v1.routes.yaml"
+components:
+  schemas:
+    CreateRouteRequest:
+      $ref: "./components/schemas/CreateRouteRequest.yaml"
+    CreateRouteResponse:
+      $ref: "./components/schemas/CreateRouteResponse.yaml"
+    RoutePoint:
+      $ref: "./components/schemas/RoutePoint.yaml"
+    Error:
+      $ref: "./components/schemas/Error.yaml"
+tags:
+  - name: Routes
+    description: Operations related to route creation and management

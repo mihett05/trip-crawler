@@ -1,0 +1,9 @@
+type: object
+description: Result of routes planning
+required:
+  - points
+properties:
+  points:
+    type: array
+    items:
+      $ref: "../schemas/RoutePoint.yaml"
