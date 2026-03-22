@@ -6,4 +6,4 @@ properties:
   points:
     type: array
     items:
-      $ref: "../schemas/RoutePoint.yaml"
+      $ref: "./RoutePoint.yaml"

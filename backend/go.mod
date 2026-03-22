@@ -7,6 +7,7 @@ require (
 	github.com/dgraph-io/dgo/v250 v250.0.0
 	github.com/getkin/kin-openapi v0.134.0
 	github.com/go-chi/chi/v5 v5.2.5
+	github.com/go-chi/cors v1.2.2
 	github.com/joho/godotenv v1.5.1
 	github.com/oapi-codegen/runtime v1.3.0
 	go.opentelemetry.io/contrib/bridges/otelzap v0.15.0

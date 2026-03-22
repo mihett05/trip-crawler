@@ -1,6 +1,7 @@
-// Mock API service for trip planning
+import type { CreateRouteRequest, CreateRouteResponse } from '../gen';
 
-interface TripSegment {
+// Trip segment and details interfaces for frontend
+export interface TripSegment {
   id: number;
   city: string;
   coordinates: [number, number]; // [latitude, longitude]
@@ -9,7 +10,7 @@ interface TripSegment {
   duration: number; // number of days
 }
 
-interface TripDetails {
+export interface TripDetails {
   id: number;
   route: TripSegment[];
   totalDistance: number; // in kilometers
@@ -19,102 +20,158 @@ interface TripDetails {
   stops: string[];
 }
 
-// Generate random coordinates for a city
-const generateMockCoordinates = (cityName: string): [number, number] => {
-  // Simple hash function to generate consistent coordinates for each city
-  let hash = 0;
-  for (let i = 0; i < cityName.length; i++) {
-    hash = cityName.charCodeAt(i) + ((hash << 5) - hash);
+// API function to convert form data to the API request format
+export const convertFormDataToApiRequest = (formData: {
+  departureCity: string;
+  middleCities: string[];
+  destinationCity: string;
+  startDate: Date | null;
+  tripDuration: number;
+}): CreateRouteRequest => {
+  if (formData.startDate === null) {
+    throw new Error('Start date is required');
   }
 
-  // Use the hash to generate latitude and longitude
-  const lat = 40 + (hash % 50);  // Range roughly between 40-90
-  const lng = -5 + ((hash * 7) % 20);  // Range roughly between -5 to 15
-  
-  return [lat, lng];
+  const points = [
+    formData.departureCity,
+    ...formData.middleCities,
+    formData.destinationCity,
+  ].filter((point) => point.trim() !== '');
+
+  return {
+    points,
+    startDate: formData.startDate.toISOString().split('T')[0], // Convert to YYYY-MM-DD format
+    durationMinDays: formData.tripDuration,
+    durationMaxDays: formData.tripDuration + 7, // Add buffer of 7 days maximum
+  };
+};
+
+// Helper function to convert API response to frontend format
+export const convertApiToTripDetails = (
+  response: CreateRouteResponse,
+  formData: {
+    departureCity: string;
+    middleCities: string[];
+    destinationCity: string;
+    startDate: Date | null;
+    tripDuration: number;
+  },
+): TripDetails => {
+  if (!formData.startDate) {
+    throw new Error('Start date is required');
+  }
+
+  const route = response.points.map((point, index) => {
+    // Convert timestamps to date strings
+    const arrivalDate = new Date(point.startTimestamp * 1000).toISOString().split('T')[0];
+    const departureDate = new Date(point.endTimestamp * 1000).toISOString().split('T')[0];
+
+    // Calculate duration in days
+    const arrival = new Date(point.startTimestamp * 1000);
+    const departure = new Date(point.endTimestamp * 1000);
+    const duration = Math.ceil((departure.getTime() - arrival.getTime()) / (1000 * 60 * 60 * 24));
+
+    // Generate coordinates if not provided (fallback)
+    const coordinates: [number, number] = point.coordinates
+      ? [point.coordinates.latitude, point.coordinates.longitude]
+      : [40 + Math.random() * 30, -10 + Math.random() * 30]; // Europe approximate coordinates
+
+    return {
+      id: index,
+      city: point.name,
+      coordinates,
+      arrivalDate,
+      departureDate,
+      duration: Math.max(1, duration),
+    };
+  });
+
+  // Determine origin and destination from the route
+  const origin = route[0]?.city || formData.departureCity;
+  const destination = route[route.length - 1]?.city || formData.destinationCity;
+  const stops = route.slice(1, -1).map((s) => s.city); // All intermediate stops
+
+  return {
+    id: Date.now(),
+    route,
+    totalDistance: route.length * 500, // Placeholder calculation
+    totalDays: formData.tripDuration,
+    origin,
+    destination,
+    stops,
+  };
 };
 
 // Mock API function to get city suggestions based on input
 export const fetchCitySuggestions = async (input: string): Promise<string[]> => {
   // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
   const allCities = [
-    'Paris', 'London', 'Rome', 'Madrid', 'Berlin', 'Amsterdam', 'Vienna', 'Prague',
-    'Barcelona', 'Milan', 'Dublin', 'Lisbon', 'Athens', 'Stockholm', 'Oslo',
-    'Copenhagen', 'Helsinki', 'Warsaw', 'Budapest', 'Brussels', 'Zurich', 'Geneva',
-    'Monaco', 'Munich', 'Florence', 'Venice', 'Nice', 'Edinburgh', 'Cardiff',
-    'New York', 'Los Angeles', 'Chicago', 'Miami', 'Las Vegas', 'San Francisco',
-    'Toronto', 'Vancouver', 'Mexico City', 'Rio de Janeiro', 'Buenos Aires',
-    'São Paulo', 'Tokyo', 'Seoul', 'Beijing', 'Shanghai', 'Hong Kong', 'Singapore',
-    'Bangkok', 'Kuala Lumpur', 'Jakarta', 'Delhi', 'Mumbai', 'Sydney', 'Melbourne',
-    'Auckland', 'Cape Town', 'Johannesburg', 'Cairo', 'Lagos', 'Nairobi'
+    'Paris',
+    'London',
+    'Rome',
+    'Madrid',
+    'Berlin',
+    'Amsterdam',
+    'Vienna',
+    'Prague',
+    'Barcelona',
+    'Milan',
+    'Dublin',
+    'Lisbon',
+    'Athens',
+    'Stockholm',
+    'Oslo',
+    'Copenhagen',
+    'Helsinki',
+    'Warsaw',
+    'Budapest',
+    'Brussels',
+    'Zurich',
+    'Geneva',
+    'Monaco',
+    'Munich',
+    'Florence',
+    'Venice',
+    'Nice',
+    'Edinburgh',
+    'Cardiff',
+    'New York',
+    'Los Angeles',
+    'Chicago',
+    'Miami',
+    'Las Vegas',
+    'San Francisco',
+    'Toronto',
+    'Vancouver',
+    'Mexico City',
+    'Rio de Janeiro',
+    'Buenos Aires',
+    'São Paulo',
+    'Tokyo',
+    'Seoul',
+    'Beijing',
+    'Shanghai',
+    'Hong Kong',
+    'Singapore',
+    'Bangkok',
+    'Kuala Lumpur',
+    'Jakarta',
+    'Delhi',
+    'Mumbai',
+    'Sydney',
+    'Melbourne',
+    'Auckland',
+    'Cape Town',
+    'Johannesburg',
+    'Cairo',
+    'Lagos',
+    'Nairobi',
   ];
 
   if (!input) return [];
-  
-  const lowerInput = input.toLowerCase();
-  return allCities.filter(city => 
-    city.toLowerCase().includes(lowerInput)
-  ).slice(0, 5); // Return max 5 suggestions
-};
 
-  // Mock API function to generate trip route
-export const generateTripRoute = async (formData: { departureCity: string; middleCities: string[]; destinationCity: string; startDate: Date | null; tripDuration: number }): Promise<TripDetails> => {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  
-  if (formData.startDate === null) {
-    throw new Error('Start date is required');
-  }
-  
-  // Create a route with all cities including departure, middle, and destination
-  const allCities = [formData.departureCity, ...formData.middleCities, formData.destinationCity];
-  
-  // Generate route segments
-  const routeSegments = allCities.map((city, index) => {
-    const [lat, lng] = generateMockCoordinates(city);
-    
-    // Calculate arrival and departure dates
-    const startDate = new Date(formData.startDate!);
-    const arrivalDate = new Date(startDate);
-    arrivalDate.setDate(arrivalDate.getDate() + Math.floor(Math.random() * index * 2)); // Stagger arrival
-    
-    const departureDate = new Date(arrivalDate);
-    departureDate.setDate(departureDate.getDate() + 1); // Stay for at least 1 day
-    
-    return {
-      id: index,
-      city,
-      coordinates: [lat, lng] as [number, number],
-      arrivalDate: arrivalDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
-      departureDate: departureDate.toISOString().split('T')[0],
-      duration: 1 + Math.floor(Math.random() * 2) // Random stay duration between 1-2 days
-    };
-  });
-  
-  // Adjust dates to fit within the trip duration
-  const totalTripDays = formData.tripDuration;
-  const actualTripDays = routeSegments.length * 2; // Estimate 2 days per segment
-  
-  if (actualTripDays > totalTripDays) {
-    // Shorten the trip by reducing stays
-    routeSegments.forEach(segment => {
-      const arrival = new Date(segment.arrivalDate);
-      const departure = new Date(arrival);
-      departure.setDate(departure.getDate() + Math.min(segment.duration, Math.floor(totalTripDays / routeSegments.length)));
-      
-      segment.departureDate = departure.toISOString().split('T')[0];
-    });
-  }
-  
-  return {
-    id: Date.now(),
-    route: routeSegments,
-    totalDistance: Math.floor(Math.random() * 5000) + 1000, // Random distance between 1000-6000 km
-    totalDays: totalTripDays,
-    origin: formData.departureCity,
-    destination: formData.destinationCity,
-    stops: formData.middleCities
-  };
+  const lowerInput = input.toLowerCase();
+  return allCities.filter((city) => city.toLowerCase().includes(lowerInput)).slice(0, 5); // Return max 5 suggestions
 };

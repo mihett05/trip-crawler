@@ -36,19 +36,25 @@ func (e ErrorCode) Valid() bool {
 	}
 }
 
+// Coordinates defines model for Coordinates.
+type Coordinates struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
+
 // CreateRouteRequest defines model for CreateRouteRequest.
 type CreateRouteRequest struct {
 	// DurationMaxDays Maximum duration of the trip in days (optional)
-	DurationMaxDays *int `json:"duration_max_days,omitempty"`
+	DurationMaxDays *int `json:"durationMaxDays,omitempty"`
 
 	// DurationMinDays Minimum duration of the trip in days
-	DurationMinDays int `json:"duration_min_days"`
+	DurationMinDays int `json:"durationMinDays"`
 
 	// Points List of destination points for the route
 	Points []string `json:"points"`
 
 	// StartDate Start date for the trip in YYYY-MM-DD format
-	StartDate openapi_types.Date `json:"start_date"`
+	StartDate openapi_types.Date `json:"startDate"`
 }
 
 // CreateRouteResponse Result of routes planning
@@ -70,17 +76,19 @@ type ErrorCode string
 
 // RoutePoint defines model for RoutePoint.
 type RoutePoint struct {
+	Coordinates *Coordinates `json:"coordinates,omitempty"`
+
+	// Details Additional details about this route point
+	Details *string `json:"details,omitempty"`
+
 	// EndTimestamp Unix timestamp for the end of this point in the route
-	EndTimestamp int64 `json:"end_timestamp"`
+	EndTimestamp int64 `json:"endTimestamp"`
 
 	// Name Name of the route point/destination
 	Name string `json:"name"`
 
-	// RouteDetails Additional details about this route point
-	RouteDetails *string `json:"route_details,omitempty"`
-
 	// StartTimestamp Unix timestamp for the start of this point in the route
-	StartTimestamp int64 `json:"start_timestamp"`
+	StartTimestamp int64 `json:"startTimestamp"`
 }
 
 // CreateRouteJSONRequestBody defines body for CreateRoute for application/json ContentType.
@@ -249,25 +257,26 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/7xWWW/jNhf9K8T9vocWUOJlskFvmUmKGkgyhpspEAwMg5GubQ4okkNSTozA/724pCxL",
-	"tiZLH/omcDvnLudcvUCmC6MVKu8gfQGXLbHg4fOLRe5xokuPE/xZovO0aqw2aL3AcCYvLfdCq1nBn2c5",
-	"X8dFdJkVhtYhhVv+LIqyYNujTM+ZXyLzVhgmFKNb7DcdjnP5OySAz7wwEiEdnCRQCEXXIR0koEop+SPt",
-	"eFtiAn5tEFIQyuMCLWySBh+hfsUnPvgqnyaJ8zaHQ0yjRZW8NtCNcJ4ez9F5oSJWPMvm2gZMS8ltgn2H",
-	"iS5oZcytIBo3WuVawTQB4bEIKBUD561QCyJQCDWKmzt+3Fq+pk3nufWznHs8ZPgX7THaqxlts/Dw8PBw",
-	"dHt7dHVFWwX3TZYw7A9PjvqDo8EpJFDtpxBAkn1+mwQs/iyFxZziq7LVItZVt2n9kH78gZmnWFod6YxW",
-	"riOoCbpShsSH7DpmJFeKqCR7zbsrXJ3b/1ucQwr/6+1U0ask0Qu4Y7pDXNp57g6yK4Zra7U9FFKm845Y",
-	"wmEW9hJARS34HUZ3f1/ejK5mo7vxt3tIYHR3fz25u7yZXU8mXycN0EaHoHN80QHwRyklw4CyPfNWASs2",
-	"2+NdMTYydRAoqnzmRYHO88IcEvqmxDOr9+u2RJVHnQoXNUQ92qmgwXn/9Gw4POn3G50plD87gS7xKl50",
-	"pOWOF7j1hYAQQXsNKbf0UIn2IO/h7ixHz4XscIjLPBfR9lh1hvFHXfoYZwO4BfancF5bkXHJnKAG95qt",
-	"hBMhJxWTXzjljllU38cLEe59oBTD87OLd5Vir8tCXQ5pJnv9c9h99JBQc92R7fEohJGRiwi1YN7yFcqt",
-	"TTyumTOYifma9qKCk2COLmFc5fXAgASkyLAyn9hAAAmUVkIKS+9N2utJnXG51M6nFxcXF8EwhA/luyeH",
-	"/WL5k0TLLscjSGCF1kWOg+P+cZ9Oa4OKGwEpfDruH38i7+J+GXqotxr0IudoYnEut2ONTukYZwqfWoGy",
-	"J+GXVaQC8+1EagbIDLe8QI+WfJrEG5ZHef3wpCq1jf8Fn3W+jiamPEbRc2OkyMK93g9HnF52jdH530DD",
-	"vmN8n+8G7CvDsTnlmtOJOj3Y91vm3vGzs2n3JAkpLMTBE5I/7Pc/FncdyoERNn2r6qkq2j0TgauWVdAh",
-	"UuW6Qy0NBW6SLsSz4fB82EDcJvZ1yHDqVcwYyGb679JfTfaQ/73ZHjo4CBhz5sosQ+fmpZThV+fkXdV4",
-	"H6E4pjsofOY5q9qeHTGhVlyKnAllSt/UzSaB0/+Czkh5tDRAHNoV2jjLg5u6sii4Xdea7fACsmG+qJQV",
-	"DGUaIOJbsU33/mnJ1liOK5TaFKh8hfuW/U1rpP0Xv27txTGLMtTV68qqolNrFdyp4IovkDChoZDAejPd",
-	"/BMAAP//6uA3VsgMAAA=",
+	"H4sIAAAAAAAC/7xWW2/jNhP9KwS/76EFlPiy2STQW3adogaSbOBmCwRBsJiIY5sLitSSIydG4P9ekJRs",
+	"yVJufeibLV7mzMw5Z/jMM5MXRqMmx9Nn7rIl5hB+fjXGCqmBMPwtrCnQkoz/FJCkUqD/PTc2B+IpF6Z8",
+	"UMgTTusCecp1mT+g5ZuEK6MX79+/SbjFX6W0KHh61zic7OLeb0+Zh5+YkY/y1SIQzkxJOMNfJTrqAhel",
+	"BZJGX8LTBNbxE7rMysJ/5Sm/hCeZlzmrNzIzZ7RERlYWTGomYO3YbyZsB/U7Tzg+QV4o5OnoKOG51P44",
+	"T0cJ16VS4DNMyZa4BSw14SLWZYtG6hfQxOteRdOEcNJG0I1YGFm1uh3oQjrylwt05JvuY8W9bG5siGl9",
+	"YZvB7vjM5P7LNVjpYVwYLYz2vZGEeYhSIXBkpV54ALnU07i4wwfWwtovOgJLEyDsAvzLLzEBhFtAdRFu",
+	"b29vDy4vDyYTVnGrAZKPh+Ojg+HoYPSZJw3uATWYV8PbY15VrCaubs/eZKIrjHY9Gc3QlSoUPVTWsUKB",
+	"1h5HskfaXdO2df2/xTlP+f8GO/0OKvEOQtxrf8Zjade4P8O+HM6tNbYroMyInlzCZhbWEo7a0++OT6/+",
+	"PruYTn5Mr66/3/CET69uzmdXZxc/zmezb7NG0AY70DlY9AT4o1SKYYhS73mrexWaentfjo1K9STa8r/X",
+	"Ct60Sq9qJJCqR2RnQsjoG6zaw+DBlMRoKV1kQRRdi8B/SkfGygwUc9LzhAxbSSfJc79S4AtWsyssanEj",
+	"c3QEedEF9l3LJ0b1+lZgqEU0HOkiLh+x1wpGJ8PPx+Px0XDY0JjUdHzE+1xIQ97T4yvIsTa4RjEGDU9q",
+	"FabKvZNrUOvHsw3HPpDv+OT49F357vEyJN9BudeiLlv9NVLPTQ+trqchicy7jtQLRhZWqGpbeVgzV2Am",
+	"52u/FhWfBCd1CQMttsPFz1eZYWVWsUecJ7y0iqd8SVSkg4EyGailcZSenp6eBoORFNpx4+34q4VHhZad",
+	"XU95wldoXcQ4OhweDv1uU6CGQvKUfzocHn7yXge0DGIZrEaDiDmaXpzf7VyjszoGTONjK1H2KGlZZSpR",
+	"1NOrmSArwEKOhNabuhd7+DwV24tnVaNtfD98MWIdvUATRpOAolAyC+cGP53H9LyjRc/7wj8KOmP+ZDeI",
+	"XxmijWnYnGKe4cF43rSl7nto0yajN4vwIc6oUPfxcPixlLeZPO+cj09a/uZT9Ppa79O8ZRwV46p67Kt4",
+	"J7lN8nKkUMUXQx2PxyfjRqi65n2xIqrN/b8rdzX0Q733xn4ga9AqCubKLEPn5qVS4QV09K7qvw9QnOA9",
+	"EL6AYBXD2QGTegVKCiZ1UVJTIpuEf/4v4Ew1ofVD0aFdoY1jPtimK/Mc7Horzx7Ze7+FRSWk4B33IUS8",
+	"q6Zl66nrHYwJXKEyRY6aqrhvOd39NtL+jd9qJ3HMogp9JVO5UjRlo4MR5aBhgT4mb9A9oN7cb/4JAAD/",
+	"/4gI52mNDQAA",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

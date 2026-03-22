@@ -16,9 +16,9 @@
               - Rome
               - Paris
               - London
-            start_date: "2024-01-15"
-            duration_min_days: 7
-            duration_max_days: 14
+            startDate: "2024-01-15"
+            durationMinDays: 7
+            durationMaxDays: 14
     responses:
       "200":
         description: Route created successfully
@@ -29,13 +29,13 @@
             example:
               points:
                 - name: Rome
-                  start_timestamp: 1705276800
-                  end_timestamp: 1705622400
-                  route_details: Details about Rome stay
+                  startTimestamp: 1705276800
+                  endTimestamp: 1705622400
+                  details: Details about Rome stay
                 - name: Paris
-                  start_timestamp: 1705622400
-                  end_timestamp: 1706227200
-                  route_details: Details about Paris stay
+                  startTimestamp: 1705622400
+                  endTimestamp: 1706227200
+                  details: Details about Paris stay
       "400":
         description: Bad request - invalid input parameters
         content:

@@ -32,9 +32,9 @@ paths:
                 - Rome
                 - Paris
                 - London
-              start_date: '2024-01-15'
-              duration_min_days: 7
-              duration_max_days: 14
+              startDate: '2024-01-15'
+              durationMinDays: 7
+              durationMaxDays: 14
       responses:
         '200':
           description: Route created successfully
@@ -45,13 +45,13 @@ paths:
               example:
                 points:
                   - name: Rome
-                    start_timestamp: 1705276800
-                    end_timestamp: 1705622400
-                    route_details: Details about Rome stay
+                    startTimestamp: 1705276800
+                    endTimestamp: 1705622400
+                    details: Details about Rome stay
                   - name: Paris
-                    start_timestamp: 1705622400
-                    end_timestamp: 1706227200
-                    route_details: Details about Paris stay
+                    startTimestamp: 1705622400
+                    endTimestamp: 1706227200
+                    details: Details about Paris stay
         '400':
           description: Bad request - invalid input parameters
           content:
@@ -70,8 +70,8 @@ components:
       type: object
       required:
         - points
-        - start_date
-        - duration_min_days
+        - startDate
+        - durationMinDays
       properties:
         points:
           type: array
@@ -83,17 +83,17 @@ components:
             - Rome
             - Paris
             - London
-        start_date:
+        startDate:
           type: string
           format: date
           description: Start date for the trip in YYYY-MM-DD format
           example: '2024-01-15'
-        duration_min_days:
+        durationMinDays:
           type: integer
           minimum: 1
           description: Minimum duration of the trip in days
           example: 7
-        duration_max_days:
+        durationMaxDays:
           type: integer
           minimum: 1
           description: Maximum duration of the trip in days (optional)
@@ -113,24 +113,26 @@ components:
       type: object
       required:
         - name
-        - start_timestamp
-        - end_timestamp
+        - startTimestamp
+        - endTimestamp
       properties:
         name:
           type: string
           description: Name of the route point/destination
           example: Rome
-        start_timestamp:
+        coordinates:
+          $ref: '#/components/schemas/Coordinates'
+        startTimestamp:
           type: integer
           format: int64
           description: Unix timestamp for the start of this point in the route
           example: 1705276800
-        end_timestamp:
+        endTimestamp:
           type: integer
           format: int64
           description: Unix timestamp for the end of this point in the route
           example: 1705622400
-        route_details:
+        details:
           type: string
           description: Additional details about this route point
           example: Historical sites to visit in Rome
@@ -150,3 +152,15 @@ components:
         message:
           type: string
           description: Full error message
+    Coordinates:
+      type: object
+      required:
+        - longitude
+        - latitude
+      properties:
+        longitude:
+          type: number
+          format: double
+        latitude:
+          type: number
+          format: double

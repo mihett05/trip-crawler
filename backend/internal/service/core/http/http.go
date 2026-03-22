@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/mihett05/trip-crawler/internal/service/routes/handlers"
 	"github.com/mihett05/trip-crawler/pkg/api"
 	"github.com/mihett05/trip-crawler/pkg/application/config"
@@ -20,6 +21,7 @@ func NewHandler(config config.Config, logger *zap.Logger, routes *handlers.HTTPH
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.CleanPath)
 	r.Use(middleware.StripSlashes)
+	r.Use(cors.Handler(cors.Options{}))
 
 	r.Use(
 		otelhttp.NewMiddleware(
