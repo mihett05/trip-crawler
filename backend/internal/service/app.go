@@ -36,6 +36,10 @@ func New(ctx context.Context, envFileName string) (*App, error) {
 
 	graphRepo := graph.NewRepository(dgraphClient)
 
+	if err := graphRepo.InitSchema(ctx); err != nil {
+		return nil, fmt.Errorf("failed to initialize dgraph schema: %w", err)
+	}
+
 	routesHandler := routeshandlers.NewHTTPHandler(app.Observability.Logger)
 
 	httpHandler := apphttp.NewHandler(app.Config, routesHandler)
