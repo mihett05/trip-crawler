@@ -5,6 +5,7 @@ go 1.25.0
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260209202127-80ab13bee0bf.1
 	github.com/caarlos0/env/v11 v11.4.0
+	github.com/dgraph-io/dgo/v250 v250.0.0
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/joho/godotenv v1.5.1
 	go.opentelemetry.io/contrib/bridges/otelzap v0.15.0
@@ -25,7 +26,6 @@ require (
 require (
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/dgraph-io/dgo/v250 v250.0.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect

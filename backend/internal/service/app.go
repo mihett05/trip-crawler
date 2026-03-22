@@ -11,8 +11,8 @@ import (
 
 	"github.com/mihett05/trip-crawler/internal/service/core/dgraph"
 	apphttp "github.com/mihett05/trip-crawler/internal/service/core/http"
-	"github.com/mihett05/trip-crawler/internal/service/repository/graph"
 	routeshandlers "github.com/mihett05/trip-crawler/internal/service/routes/handlers"
+	"github.com/mihett05/trip-crawler/internal/service/routes/repositories/graph"
 	"github.com/mihett05/trip-crawler/pkg/application"
 )
 

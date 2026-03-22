@@ -7,7 +7,7 @@ import (
 
 	"github.com/dgraph-io/dgo/v250/protos/api"
 	"github.com/mihett05/trip-crawler/internal/service/core/dgraph"
-	"github.com/mihett05/trip-crawler/internal/service/routes/domain/models"
+	"github.com/mihett05/trip-crawler/internal/service/routes/models"
 )
 
 type Repository struct {
@@ -23,9 +23,16 @@ func (r *Repository) InitSchema(ctx context.Context) error {
 		Schema: `
 			city.name: string @index(term) .
 			station.name: string @index(term) .
+			station.transport_type: string @index(exact) .
+			trip.external_id: string @index(exact) .
 			trip.price: float @index(float) .
 			trip.departure_at: datetime @index(hour) .
+			trip.arrival_at: datetime .
 			trip.transport_type: string @index(exact) .
+
+			has_station: [uid] @reverse .
+			departs: [uid] @reverse .
+			destination: uid .
 
 			type City {
 				city.name
@@ -49,7 +56,7 @@ func (r *Repository) InitSchema(ctx context.Context) error {
 		`,
 	}
 	if err := r.dg.Client.Alter(ctx, op); err != nil {
-		return fmt.Errorf("graph.Repository.InitSchema: %w", err)
+		return fmt.Errorf("client.Alter: %w", err)
 	}
 	return nil
 }
@@ -74,7 +81,7 @@ func (r *Repository) SaveTrip(ctx context.Context, trip *models.Trip) error {
 
 	tripJSON, err := json.Marshal(dto)
 	if err != nil {
-		return fmt.Errorf("graph.Repository.SaveTrip: failed to marshal trip (ID: %s): %w", trip.ExternalID, err)
+		return fmt.Errorf("marshal trip (ID: %s): json.Marshal: %w", trip.ExternalID, err)
 	}
 
 	mutation := &api.Mutation{
@@ -84,7 +91,7 @@ func (r *Repository) SaveTrip(ctx context.Context, trip *models.Trip) error {
 
 	_, err = txn.Mutate(ctx, mutation)
 	if err != nil {
-		return fmt.Errorf("graph.Repository.SaveTip: failed to mutate trip in dgraph %w", err)
+		return fmt.Errorf("txn.Mutate: %w", err)
 	}
 
 	return nil
@@ -103,7 +110,7 @@ func (r *Repository) GetCityStations(ctx context.Context, cityName string) ([]mo
 
 	resp, err := r.dg.Client.NewTxn().QueryWithVars(ctx, query, map[string]string{"$name": cityName})
 	if err != nil {
-		return nil, fmt.Errorf("graph.Repository.GetCityStations (City: %s): %w", cityName, err)
+		return nil, fmt.Errorf("txn.QueryWithVars (City: %s): %w", cityName, err)
 	}
 
 	var decode struct {
@@ -113,7 +120,7 @@ func (r *Repository) GetCityStations(ctx context.Context, cityName string) ([]mo
 	}
 
 	if err := json.Unmarshal(resp.Json, &decode); err != nil {
-		return nil, fmt.Errorf("graph.Repository.GetCityStations: unmarshal error: %w", err)
+		return nil, fmt.Errorf("json.Unmarshal: %w", err)
 	}
 
 	if len(decode.City) == 0 {
@@ -148,7 +155,7 @@ func (r *Repository) GetStationDepartures(ctx context.Context, stationID string)
 
 	resp, err := r.dg.Client.NewTxn().Query(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("graph.Repository.GetStationDepartures: %w", err)
+		return nil, fmt.Errorf("txn.Query: %w", err)
 	}
 
 	var decode struct {
@@ -158,7 +165,7 @@ func (r *Repository) GetStationDepartures(ctx context.Context, stationID string)
 	}
 
 	if err := json.Unmarshal(resp.Json, &decode); err != nil {
-		return nil, fmt.Errorf("graph.Repository.GetStationDepartures.Unmarshal: %w", err)
+		return nil, fmt.Errorf("json.Unmarshal: %w", err)
 	}
 
 	if len(decode.Station) == 0 {
@@ -183,7 +190,7 @@ func (r *Repository) GetNodeByID(ctx context.Context, uid string) ([]byte, error
 	query := fmt.Sprintf(`{ node(func: uid(%s)) { uid dgraph.type expand(_all_) } }`, uid)
 	resp, err := r.dg.Client.NewTxn().Query(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("graph.Repository.GetNodeByID (UID: %s): %w", uid, err)
+		return nil, fmt.Errorf("txn.Query (UID: %s): %w", uid, err)
 	}
 	return resp.Json, nil
 }
@@ -197,7 +204,7 @@ func (r *Repository) HasConnection(ctx context.Context, fromUID, toUID string) (
 
 	resp, err := r.dg.Client.NewTxn().Query(ctx, query)
 	if err != nil {
-		return false, fmt.Errorf("graph.Repository.HasConnection: %w", err)
+		return false, fmt.Errorf("txn.Query: %w", err)
 	}
 
 	var decode struct {
@@ -207,7 +214,7 @@ func (r *Repository) HasConnection(ctx context.Context, fromUID, toUID string) (
 	}
 
 	if err := json.Unmarshal(resp.Json, &decode); err != nil {
-		return false, fmt.Errorf("graph.Repository.HasConnection.Unmarshal: %w", err)
+		return false, fmt.Errorf("json.Unmarshal: %w", err)
 	}
 
 	if len(decode.Check) > 0 && len(decode.Check[0].Departs) > 0 {
