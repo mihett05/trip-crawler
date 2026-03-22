@@ -47,7 +47,7 @@ func New(ctx context.Context, envFileName string) (*App, error) {
 
 	routesHandler := routeshandlers.NewHTTPHandler(app.Observability.Logger, itineraryBuilder)
 
-	httpHandler := apphttp.NewHandler(app.Config, routesHandler)
+	httpHandler := apphttp.NewHandler(app.Config, app.Observability.Logger, routesHandler)
 
 	return &App{
 		App:              app,

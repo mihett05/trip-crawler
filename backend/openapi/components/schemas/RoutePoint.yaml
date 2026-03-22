@@ -1,0 +1,25 @@
+type: object
+required:
+  - name
+  - start_timestamp
+  - end_timestamp
+properties:
+  name:
+    type: string
+    description: Name of the route point/destination
+    example: Rome
+  start_timestamp:
+    type: integer
+    format: int64
+    description: Unix timestamp for the start of this point in the route
+    example: 1705276800
+  end_timestamp:
+    type: integer
+    format: int64
+    description: Unix timestamp for the end of this point in the route
+    example: 1705622400
+  route_details:
+    type: string
+    description: Additional details about this route point
+    example: Historical sites to visit in Rome
+    nullable: true

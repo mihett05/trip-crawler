@@ -1,0 +1,152 @@
+openapi: 3.0.3
+info:
+  title: Trip Crawler API
+  description: API for creating travel routes by specifying points, dates, and duration
+  version: 1.0.0
+  license:
+    name: ''
+    url: http://localhost:8888
+servers:
+  - url: http://localhost:8888
+    description: Local development server
+security: []
+tags:
+  - name: Routes
+    description: Operations related to route creation and management
+paths:
+  /v1/routes:
+    post:
+      tags:
+        - Routes
+      summary: Create a new travel route
+      description: Creates a new travel route with specified points and duration parameters
+      operationId: createRoute
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRouteRequest'
+            example:
+              points:
+                - Rome
+                - Paris
+                - London
+              start_date: '2024-01-15'
+              duration_min_days: 7
+              duration_max_days: 14
+      responses:
+        '200':
+          description: Route created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateRouteResponse'
+              example:
+                points:
+                  - name: Rome
+                    start_timestamp: 1705276800
+                    end_timestamp: 1705622400
+                    route_details: Details about Rome stay
+                  - name: Paris
+                    start_timestamp: 1705622400
+                    end_timestamp: 1706227200
+                    route_details: Details about Paris stay
+        '400':
+          description: Bad request - invalid input parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    CreateRouteRequest:
+      type: object
+      required:
+        - points
+        - start_date
+        - duration_min_days
+      properties:
+        points:
+          type: array
+          items:
+            type: string
+          description: List of destination points for the route
+          minItems: 1
+          example:
+            - Rome
+            - Paris
+            - London
+        start_date:
+          type: string
+          format: date
+          description: Start date for the trip in YYYY-MM-DD format
+          example: '2024-01-15'
+        duration_min_days:
+          type: integer
+          minimum: 1
+          description: Minimum duration of the trip in days
+          example: 7
+        duration_max_days:
+          type: integer
+          minimum: 1
+          description: Maximum duration of the trip in days (optional)
+          example: 14
+          nullable: true
+    CreateRouteResponse:
+      type: object
+      description: Result of routes planning
+      required:
+        - points
+      properties:
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoutePoint'
+    RoutePoint:
+      type: object
+      required:
+        - name
+        - start_timestamp
+        - end_timestamp
+      properties:
+        name:
+          type: string
+          description: Name of the route point/destination
+          example: Rome
+        start_timestamp:
+          type: integer
+          format: int64
+          description: Unix timestamp for the start of this point in the route
+          example: 1705276800
+        end_timestamp:
+          type: integer
+          format: int64
+          description: Unix timestamp for the end of this point in the route
+          example: 1705622400
+        route_details:
+          type: string
+          description: Additional details about this route point
+          example: Historical sites to visit in Rome
+          nullable: true
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Error code
+          enum:
+            - INVALID_INPUT
+            - INTERNAL_ERROR
+        message:
+          type: string
+          description: Full error message

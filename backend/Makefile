@@ -1,10 +1,18 @@
-install:
+install-deps:
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-	go install github.com/google/gnostic/cmd/protoc-gen-openapi@latest
-	go install github.com/bufbuild/buf/cmd/buf@latest
+	go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
 
-gen:
-	buf generate
+validate-openapi:
+	redocly lint openapi/openapi.yaml
+
+bundle-openapi: validate-openapi
+	redocly bundle openapi/openapi.yaml -o openapi/bundled.yaml
+
+gen-openapi-server: bundle-openapi
+	go generate pkg/api/generate.go
+
+
+gen: gen-openapi-server
 
 run:
 	go run ./cmd/service/main.go --envFile=configs/.env.service.local
