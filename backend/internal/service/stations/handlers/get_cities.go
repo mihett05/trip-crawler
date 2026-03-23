@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/mihett05/trip-crawler/pkg/api"
@@ -11,8 +12,9 @@ func (h *HTTPHandler) GetCities(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		api.Write(w, api.Error{
 			Code:    api.INTERNALERROR,
-			Message: err.Error(),
+			Message: fmt.Errorf("service.GetCities: %w", err).Error(),
 		}, http.StatusInternalServerError)
+		return
 	}
 
 	resp := api.GetCitiesResponse{

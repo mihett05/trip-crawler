@@ -15,6 +15,8 @@ import (
 	"github.com/mihett05/trip-crawler/internal/service/routes/gateway"
 	routeshandlers "github.com/mihett05/trip-crawler/internal/service/routes/handlers"
 	"github.com/mihett05/trip-crawler/internal/service/routes/repositories/graph"
+	stationhandlers "github.com/mihett05/trip-crawler/internal/service/stations/handlers"
+	stationsservices "github.com/mihett05/trip-crawler/internal/service/stations/services/cities"
 	"github.com/mihett05/trip-crawler/pkg/application"
 )
 
@@ -46,8 +48,10 @@ func New(ctx context.Context, envFileName string) (*App, error) {
 	itineraryBuilder := gateway.NewDgraphItineraryBuilder(dgraphClient)
 
 	routesHandler := routeshandlers.NewHTTPHandler(app.Observability.Logger, itineraryBuilder)
+	stationsService := stationsservices.New(graphRepo)
+	stationsHandler := stationhandlers.NewHTTPHandler(app.Observability.Logger, stationsService)
 
-	httpHandler := apphttp.NewHandler(app.Config, app.Observability.Logger, routesHandler)
+	httpHandler := apphttp.NewHandler(app.Config, app.Observability.Logger, routesHandler, stationsHandler)
 
 	return &App{
 		App:              app,

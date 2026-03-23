@@ -1,6 +1,9 @@
 package cities
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 type Service struct {
 	repository GraphRepository
@@ -13,5 +16,10 @@ func New(repository GraphRepository) *Service {
 }
 
 func (s *Service) GetCities(ctx context.Context) ([]string, error) {
-	return s.repository.GetAllCities(ctx)
+	cities, err := s.repository.GetAllCities(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("repository.GetAllCities: %w", err)
+	}
+
+	return cities, nil
 }
