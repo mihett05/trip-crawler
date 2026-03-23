@@ -15,7 +15,7 @@ gen-openapi-server: bundle-openapi
 gen: gen-openapi-server
 
 test-data: up
-	go run scripts/generate_test_data.go
+	go run scripts/generate_fully_connected_test_data.go
 
 run:
 	go run ./cmd/service/main.go --envFile=configs/.env.service.local
