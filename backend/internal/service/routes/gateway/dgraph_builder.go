@@ -44,7 +44,9 @@ func (b *DgraphItineraryBuilder) Build(ctx context.Context, points []string, sta
 
 		finalRoute = append(finalRoute, point)
 
-		currentTimestamp = trip.ArrivalAt.Add(48 * time.Hour).Unix()
+		// Set the next search time to after arrival at destination
+		// Add a small layover time (e.g., 1 hour) to allow for transfer
+		currentTimestamp = trip.ArrivalAt.Add(1 * time.Hour).Unix()
 	}
 
 	finalRoute = append(finalRoute, models.RoutePoint{Name: points[len(points)-1]})
@@ -53,15 +55,15 @@ func (b *DgraphItineraryBuilder) Build(ctx context.Context, points []string, sta
 
 func (b *DgraphItineraryBuilder) findBestTrip(ctx context.Context, from, to string, afterTime string) (*graph.TripDTO, error) {
 	query := `query all($from: string, $to: string, $time: string) {
-		A as var(func: eq(city.name, $from)) {
+		var(func: eq(city.name, $from)) {
 			has_station { A_stations as uid }
 		}
-		B as var(func: eq(city.name, $to)) {
+		var(func: eq(city.name, $to)) {
 			has_station { B_stations as uid }
 		}
 
 		trips(func: uid(A_stations)) {
-			departs @filter(ge(trip.departure_at, $time)) @orderasc(trip.price) {
+			departs @filter(ge(trip.departure_at, $time)) {
 				uid
 				trip.external_id
 				trip.price
@@ -95,9 +97,14 @@ func (b *DgraphItineraryBuilder) findBestTrip(ctx context.Context, from, to stri
 		return nil, fmt.Errorf("json.Unmarshal: %w", err)
 	}
 
-	if len(decode.Trips) == 0 || len(decode.Trips[0].Departs) == 0 {
+	if len(decode.Trips) == 0 {
 		return nil, fmt.Errorf("no trips found from %s to %s after %s", from, to, afterTime)
 	}
 
+	if len(decode.Trips[0].Departs) == 0 {
+		return nil, fmt.Errorf("no matching trips found from %s to %s after %s", from, to, afterTime)
+	}
+
+	// Return the first (earliest) trip after the specified time
 	return &decode.Trips[0].Departs[0], nil
 }

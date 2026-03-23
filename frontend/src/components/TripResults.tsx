@@ -228,6 +228,7 @@ const TripResults: React.FC<TripResultsProps> = ({ tripData }) => {
                               day: 'numeric',
                             })}
                           </Typography>
+
                           <Typography variant="body2" color="text.secondary">
                             <strong>{t('departure')}</strong>{' '}
                             {new Date(segment.departureDate).toLocaleDateString(undefined, {
@@ -241,7 +242,7 @@ const TripResults: React.FC<TripResultsProps> = ({ tripData }) => {
                             <strong>
                               {t('stay', {
                                 count: segment.duration,
-                                plural: segment.duration !== 1 ? 's' : '',
+                                plural: segment.duration !== 1 ? '' : '',
                               })}
                             </strong>
                           </Typography>
