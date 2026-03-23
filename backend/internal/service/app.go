@@ -11,16 +11,19 @@ import (
 
 	"github.com/mihett05/trip-crawler/internal/service/core/dgraph"
 	apphttp "github.com/mihett05/trip-crawler/internal/service/core/http"
+	"github.com/mihett05/trip-crawler/internal/service/routes"
+	"github.com/mihett05/trip-crawler/internal/service/routes/gateway"
 	routeshandlers "github.com/mihett05/trip-crawler/internal/service/routes/handlers"
 	"github.com/mihett05/trip-crawler/internal/service/routes/repositories/graph"
 	"github.com/mihett05/trip-crawler/pkg/application"
 )
 
 type App struct {
-	App       *application.App
-	Server    *http.Server
-	DGraph    *dgraph.Client
-	GraphRepo *graph.Repository
+	App              *application.App
+	Server           *http.Server
+	DGraph           *dgraph.Client
+	GraphRepo        *graph.Repository
+	ItineraryBuilder routes.ItineraryBuilder
 }
 
 func New(ctx context.Context, envFileName string) (*App, error) {
@@ -40,14 +43,17 @@ func New(ctx context.Context, envFileName string) (*App, error) {
 		return nil, fmt.Errorf("failed to initialize dgraph schema: %w", err)
 	}
 
-	routesHandler := routeshandlers.NewHTTPHandler(app.Observability.Logger)
+	itineraryBuilder := gateway.NewDgraphItineraryBuilder(dgraphClient)
+
+	routesHandler := routeshandlers.NewHTTPHandler(app.Observability.Logger, itineraryBuilder)
 
 	httpHandler := apphttp.NewHandler(app.Config, routesHandler)
 
 	return &App{
-		App:       app,
-		DGraph:    dgraphClient,
-		GraphRepo: graphRepo,
+		App:              app,
+		DGraph:           dgraphClient,
+		GraphRepo:        graphRepo,
+		ItineraryBuilder: itineraryBuilder,
 		Server: &http.Server{
 			Addr:         fmt.Sprintf(":%d", app.Config.HTTP.Port),
 			Handler:      httpHandler,
