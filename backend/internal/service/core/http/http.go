@@ -7,14 +7,15 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/mihett05/trip-crawler/internal/service/routes/handlers"
+	routehandlers "github.com/mihett05/trip-crawler/internal/service/routes/handlers"
+	stationhandlers "github.com/mihett05/trip-crawler/internal/service/stations/handlers"
 	"github.com/mihett05/trip-crawler/pkg/api"
 	"github.com/mihett05/trip-crawler/pkg/application/config"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 )
 
-func NewHandler(config config.Config, logger *zap.Logger, routes *handlers.HTTPHandler) http.Handler {
+func NewHandler(config config.Config, logger *zap.Logger, routes *routehandlers.HTTPHandler, stations *stationhandlers.HTTPHandler) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(ZapLogger(logger))
@@ -31,7 +32,7 @@ func NewHandler(config config.Config, logger *zap.Logger, routes *handlers.HTTPH
 		),
 	)
 
-	server := NewServer(routes)
+	server := NewServer(routes, stations)
 	api.HandlerFromMux(server, r)
 
 	r.Get("/openapi.json", ServeOpenAPI)

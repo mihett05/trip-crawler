@@ -102,76 +102,40 @@ export const convertApiToTripDetails = (
   };
 };
 
-// Mock API function to get city suggestions based on input
+import { getCities } from '../gen';
+
+// API function to get city suggestions based on input
 export const fetchCitySuggestions = async (input: string): Promise<string[]> => {
-  // Simulate network delay
-  await new Promise((resolve) => setTimeout(resolve, 300));
-
-  const allCities = [
-    'Paris',
-    'London',
-    'Rome',
-    'Madrid',
-    'Berlin',
-    'Amsterdam',
-    'Vienna',
-    'Prague',
-    'Barcelona',
-    'Milan',
-    'Dublin',
-    'Lisbon',
-    'Athens',
-    'Stockholm',
-    'Oslo',
-    'Copenhagen',
-    'Helsinki',
-    'Warsaw',
-    'Budapest',
-    'Brussels',
-    'Zurich',
-    'Geneva',
-    'Monaco',
-    'Munich',
-    'Florence',
-    'Venice',
-    'Nice',
-    'Edinburgh',
-    'Cardiff',
-    'New York',
-    'Los Angeles',
-    'Chicago',
-    'Miami',
-    'Las Vegas',
-    'San Francisco',
-    'Toronto',
-    'Vancouver',
-    'Mexico City',
-    'Rio de Janeiro',
-    'Buenos Aires',
-    'São Paulo',
-    'Tokyo',
-    'Seoul',
-    'Beijing',
-    'Shanghai',
-    'Hong Kong',
-    'Singapore',
-    'Bangkok',
-    'Kuala Lumpur',
-    'Jakarta',
-    'Delhi',
-    'Mumbai',
-    'Sydney',
-    'Melbourne',
-    'Auckland',
-    'Cape Town',
-    'Johannesburg',
-    'Cairo',
-    'Lagos',
-    'Nairobi',
-  ];
-
-  if (!input) return [];
-
-  const lowerInput = input.toLowerCase();
-  return allCities.filter((city) => city.toLowerCase().includes(lowerInput)).slice(0, 5); // Return max 5 suggestions
+  try {
+    // Get all cities from the API
+    const response = await getCities();
+    
+    // Extract cities array from response (the API returns { cities: [] })
+    const allCities = response.cities || [];
+    
+    if (!input) return allCities.slice(0, 10); // Return first 10 if no input
+    
+    const lowerInput = input.toLowerCase();
+    return allCities.filter((city) => city?.toLowerCase().includes(lowerInput)).slice(0, 5); // Return max 5 suggestions
+  } catch (error) {
+    console.error('Error fetching city suggestions:', error);
+    // Fallback to a small static list if API fails
+    const fallbackCities = [
+      'Paris',
+      'London',
+      'Rome',
+      'Madrid',
+      'Berlin',
+      'Amsterdam',
+      'Vienna',
+      'Prague',
+      'Barcelona',
+      'Milan',
+    ];
+    
+    if (!input) return fallbackCities;
+    
+    const lowerInput = input.toLowerCase();
+    return fallbackCities.filter((city) => city.toLowerCase().includes(lowerInput)).slice(0, 5);
+  }
 };

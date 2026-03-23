@@ -21,6 +21,7 @@ require (
 	go.opentelemetry.io/otel/sdk/log v0.16.0
 	go.opentelemetry.io/otel/sdk/metric v1.41.0
 	go.uber.org/zap v1.27.1
+	google.golang.org/grpc v1.79.1
 )
 
 require (
@@ -59,7 +60,6 @@ require (
 	golang.org/x/tools v0.41.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260226221140-a57be14db171 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260217215200-42d3e9bedb6d // indirect
-	google.golang.org/grpc v1.79.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

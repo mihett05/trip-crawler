@@ -8,7 +8,7 @@ import (
 
 func (r *Repository) GetAllCities(ctx context.Context) ([]string, error) {
 	query := `{
-		cities(func: type(City)) {
+		cities(func: type("City")) {
 		    uid
 		    city.name
 		}
@@ -19,13 +19,15 @@ func (r *Repository) GetAllCities(ctx context.Context) ([]string, error) {
 		return nil, fmt.Errorf("txn.Query: %w", err)
 	}
 
-	var decode []CityDTO
+	var decode struct {
+		Cities []CityDTO `json:"cities"`
+	}
 	if err := json.Unmarshal(resp.Json, &decode); err != nil {
 		return nil, fmt.Errorf("json.Unmarshal: %w", err)
 	}
 
-	cities := make([]string, 0, len(decode))
-	for _, city := range decode {
+	cities := make([]string, 0, len(decode.Cities))
+	for _, city := range decode.Cities {
 		cities = append(cities, city.Name)
 	}
 
