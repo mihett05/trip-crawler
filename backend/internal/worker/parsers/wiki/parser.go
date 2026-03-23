@@ -41,11 +41,10 @@ func ParseTables(doc *goquery.Document) []CityData {
 			}
 
 			citiesData = append(citiesData, CityData{
-				ID:             strings.TrimSpace(tds.Eq(0).Text()),
-				Name:           strings.TrimSpace(tds.Eq(1).Text()),
-				Region:         strings.TrimSpace(tds.Eq(2).Text()),
-				Population2021: strings.TrimSpace(tds.Eq(3).Text()),
-				Population2010: strings.TrimSpace(tds.Eq(4).Text()),
+				ID:         strings.TrimSpace(tds.Eq(0).Text()),
+				Name:       strings.TrimSpace(tds.Eq(1).Text()),
+				Region:     strings.TrimSpace(tds.Eq(2).Text()),
+				Population: strings.TrimSpace(tds.Eq(3).Text()),
 			})
 		})
 	})

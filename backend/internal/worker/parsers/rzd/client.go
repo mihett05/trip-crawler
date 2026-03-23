@@ -35,8 +35,8 @@ func (c *Client) do(req *http.Request, dest interface{}) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("ошибка API РЖД: status=%d, body=%s", resp.StatusCode, string(body))
+		body, err := io.ReadAll(resp.Body)
+		return fmt.Errorf("rzd.Client.do request=%s response=%s: %w", req, string(body), err)
 	}
 
 	return json.NewDecoder(resp.Body).Decode(dest)

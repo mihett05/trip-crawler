@@ -28,7 +28,7 @@ func LoadWikiPage() (*goquery.Document, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("ошибка HTTP: %d", resp.StatusCode)
+		return nil, fmt.Errorf("HTTP EXP: %d", resp.StatusCode)
 	}
 
 	return goquery.NewDocumentFromReader(resp.Body)
