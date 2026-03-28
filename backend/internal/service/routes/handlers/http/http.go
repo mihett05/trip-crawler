@@ -5,13 +5,13 @@ import (
 	"go.uber.org/zap"
 )
 
-type HTTPHandler struct {
+type Handler struct {
 	logger           *zap.Logger
 	itineraryBuilder routes.ItineraryBuilder
 }
 
-func NewHTTPHandler(logger *zap.Logger, builder routes.ItineraryBuilder) *HTTPHandler {
-	return &HTTPHandler{
+func New(logger *zap.Logger, builder routes.ItineraryBuilder) *Handler {
+	return &Handler{
 		logger:           logger,
 		itineraryBuilder: builder,
 	}

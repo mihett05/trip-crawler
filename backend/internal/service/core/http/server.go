@@ -3,16 +3,16 @@ package http
 import (
 	"net/http"
 
-	routes "github.com/mihett05/trip-crawler/internal/service/routes/handlers"
-	stations "github.com/mihett05/trip-crawler/internal/service/stations/handlers"
+	cities "github.com/mihett05/trip-crawler/internal/service/cities/handlers/http"
+	routes "github.com/mihett05/trip-crawler/internal/service/routes/handlers/http"
 )
 
 type Server struct {
-	routes   *routes.HTTPHandler
-	stations *stations.HTTPHandler
+	routes   *routes.Handler
+	stations *cities.Handler
 }
 
-func NewServer(routes *routes.HTTPHandler, stations *stations.HTTPHandler) *Server {
+func NewServer(routes *routes.Handler, stations *cities.Handler) *Server {
 	return &Server{
 		routes:   routes,
 		stations: stations,

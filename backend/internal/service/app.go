@@ -9,14 +9,17 @@ import (
 
 	"go.uber.org/zap"
 
+	citieshttphandlers "github.com/mihett05/trip-crawler/internal/service/cities/handlers/http"
+	citiesnatshandlers "github.com/mihett05/trip-crawler/internal/service/cities/handlers/nats"
+	citiessservices "github.com/mihett05/trip-crawler/internal/service/cities/services/cities"
 	"github.com/mihett05/trip-crawler/internal/service/core/dgraph"
 	apphttp "github.com/mihett05/trip-crawler/internal/service/core/http"
+	"github.com/mihett05/trip-crawler/internal/service/core/nats"
 	"github.com/mihett05/trip-crawler/internal/service/routes"
 	"github.com/mihett05/trip-crawler/internal/service/routes/gateway"
-	routeshandlers "github.com/mihett05/trip-crawler/internal/service/routes/handlers"
+	routeshttphandlers "github.com/mihett05/trip-crawler/internal/service/routes/handlers/http"
+	routesnatshandlers "github.com/mihett05/trip-crawler/internal/service/routes/handlers/nats"
 	"github.com/mihett05/trip-crawler/internal/service/routes/repositories/graph"
-	stationhandlers "github.com/mihett05/trip-crawler/internal/service/stations/handlers"
-	stationsservices "github.com/mihett05/trip-crawler/internal/service/stations/services/cities"
 	"github.com/mihett05/trip-crawler/pkg/application"
 )
 
@@ -24,6 +27,7 @@ type App struct {
 	App              *application.App
 	Server           *http.Server
 	DGraph           *dgraph.Client
+	NATS             *nats.Client
 	GraphRepo        *graph.Repository
 	ItineraryBuilder routes.ItineraryBuilder
 }
@@ -40,22 +44,34 @@ func New(ctx context.Context, envFileName string) (*App, error) {
 	}
 
 	graphRepo := graph.NewRepository(dgraphClient)
-
 	if err := graphRepo.InitSchema(ctx); err != nil {
 		return nil, fmt.Errorf("failed to initialize dgraph schema: %w", err)
 	}
 
+	natsClient, err := nats.New(ctx, app.Config, app.Observability.Logger)
+	if err != nil {
+		return nil, fmt.Errorf("nats.New: %w", err)
+	}
+
 	itineraryBuilder := gateway.NewDgraphItineraryBuilder(dgraphClient)
 
-	routesHandler := routeshandlers.NewHTTPHandler(app.Observability.Logger, itineraryBuilder)
-	stationsService := stationsservices.New(graphRepo)
-	stationsHandler := stationhandlers.NewHTTPHandler(app.Observability.Logger, stationsService)
+	routesHTTPHandler := routeshttphandlers.New(app.Observability.Logger, itineraryBuilder)
+	routesNATSHandler := routesnatshandlers.New()
 
-	httpHandler := apphttp.NewHandler(app.Config, app.Observability.Logger, routesHandler, stationsHandler)
+	citiesService := citiessservices.New(graphRepo)
+	citiesHTTPHandler := citieshttphandlers.New(app.Observability.Logger, citiesService)
+	citiesNATSHandler := citiesnatshandlers.New()
+
+	httpHandler := apphttp.NewHandler(app.Config, app.Observability.Logger, routesHTTPHandler, citiesHTTPHandler)
+
+	if err = natsClient.RunConsumers(ctx, citiesNATSHandler, routesNATSHandler); err != nil {
+		return nil, fmt.Errorf("natsClient.RunConsumers: %w", err)
+	}
 
 	return &App{
 		App:              app,
 		DGraph:           dgraphClient,
+		NATS:             natsClient,
 		GraphRepo:        graphRepo,
 		ItineraryBuilder: itineraryBuilder,
 		Server: &http.Server{
@@ -87,4 +103,6 @@ func (a *App) Shutdown() {
 	if err := a.Server.Shutdown(ctxShutdown); err != nil {
 		a.App.Observability.Logger.Fatal("service.App.Server.Shutdown: server forced to shutdown", zap.Error(err))
 	}
+
+	a.NATS.Shutdown()
 }
