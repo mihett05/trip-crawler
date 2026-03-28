@@ -77,6 +77,10 @@ const (
 	maxDaysAhead       = 90
 )
 
+func truncateToDay(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+}
+
 // shouldParse reports whether a parse task should be enqueued today
 // for the given connection and departure date.
 func shouldParse(conn Connection, today, departureDate time.Time) bool {
