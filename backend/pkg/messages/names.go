@@ -10,4 +10,7 @@ const (
 	TripsSubjectPrefix    = "TRIPS."
 	TripsSubjectRequested = TripsSubjectPrefix + "requested"
 	TripsSubjectParsed    = TripsSubjectPrefix + "parsed"
+
+	SchedulesTripsSubjectPrefix = "schedules.trips."
+	SchedulesTripsSubjectParsed = SchedulesTripsSubjectPrefix + "parsed"
 )

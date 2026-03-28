@@ -30,6 +30,9 @@ type App struct {
 	NATS             *nats.Client
 	GraphRepo        *graph.Repository
 	ItineraryBuilder routes.ItineraryBuilder
+
+	CitiesNATSHandler *citiesnatshandlers.Handler
+	RoutesNATSHandler *routesnatshandlers.Handler
 }
 
 func New(ctx context.Context, envFileName string) (*App, error) {
@@ -64,16 +67,14 @@ func New(ctx context.Context, envFileName string) (*App, error) {
 
 	httpHandler := apphttp.NewHandler(app.Config, app.Observability.Logger, routesHTTPHandler, citiesHTTPHandler)
 
-	if err = natsClient.RunConsumers(ctx, citiesNATSHandler, routesNATSHandler); err != nil {
-		return nil, fmt.Errorf("natsClient.RunConsumers: %w", err)
-	}
-
 	return &App{
-		App:              app,
-		DGraph:           dgraphClient,
-		NATS:             natsClient,
-		GraphRepo:        graphRepo,
-		ItineraryBuilder: itineraryBuilder,
+		App:               app,
+		DGraph:            dgraphClient,
+		NATS:              natsClient,
+		GraphRepo:         graphRepo,
+		ItineraryBuilder:  itineraryBuilder,
+		CitiesNATSHandler: citiesNATSHandler,
+		RoutesNATSHandler: routesNATSHandler,
 		Server: &http.Server{
 			Addr:         fmt.Sprintf(":%d", app.Config.HTTP.Port),
 			Handler:      httpHandler,
@@ -86,13 +87,20 @@ func New(ctx context.Context, envFileName string) (*App, error) {
 	}, nil
 }
 
-func (a *App) Start() {
+func (a *App) Start(ctx context.Context) {
 	go func() {
 		a.App.Observability.Logger.Info("main service server started", zap.Uint16("port", a.App.Config.HTTP.Port))
 		if err := a.Server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			a.App.Observability.Logger.Fatal("service.App.Server.ListenAndServe: server failed", zap.Error(err))
 		}
 	}()
+
+	if err := a.NATS.RunConsumers(ctx, a.CitiesNATSHandler, a.RoutesNATSHandler); err != nil {
+		a.App.Observability.Logger.Fatal(
+			"worker.App.NATS.RunConsumers: failed to start consumers",
+			zap.Error(err),
+		)
+	}
 }
 
 func (a *App) Shutdown() {

@@ -38,7 +38,7 @@ func initLoggerProvider(ctx context.Context, config config.Config, resource *res
 	)
 	otellogglobal.SetLoggerProvider(loggerProvider)
 
-	baseZapLogger, err := getZapLogger(config.App.Environment)
+	baseZapLogger, err := getZapLogger(config)
 	if err != nil {
 		return nil, nil, fmt.Errorf("getZapLogger: %w", err)
 	}
@@ -49,10 +49,17 @@ func initLoggerProvider(ctx context.Context, config config.Config, resource *res
 	return loggerProvider, zap.New(zapTee, zap.AddCaller()), nil
 }
 
-func getZapLogger(environment string) (*zap.Logger, error) {
-	if environment == config.EnvDevelopment {
-		return zap.NewDevelopment()
+func getZapLogger(cfg config.Config) (*zap.Logger, error) {
+	options := []zap.Option{
+		zap.Fields(
+			zap.String("name", cfg.App.Name),
+			zap.String("env", cfg.App.Environment),
+		),
 	}
 
-	return zap.NewProduction()
+	if cfg.App.Environment == config.EnvDevelopment {
+		return zap.NewDevelopment(options...)
+	}
+
+	return zap.NewProduction(options...)
 }
