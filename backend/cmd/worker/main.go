@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/mihett05/trip-crawler/internal/service"
+	"github.com/mihett05/trip-crawler/internal/worker"
 )
 
 func main() {
@@ -16,7 +16,7 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
-	app, err := service.New(ctx, *envFile)
+	app, err := worker.New(ctx, *envFile)
 	if err != nil {
 		panic(err)
 	}

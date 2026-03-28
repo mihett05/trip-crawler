@@ -4,8 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	citieshandlers "github.com/mihett05/trip-crawler/internal/service/cities/handlers/nats"
-	routeshandlers "github.com/mihett05/trip-crawler/internal/service/routes/handlers/nats"
+	queuehandlers "github.com/mihett05/trip-crawler/internal/worker/queue/handlers"
 	"github.com/mihett05/trip-crawler/pkg/application/config"
 	natsutils "github.com/mihett05/trip-crawler/pkg/messages/nats-utils"
 	"github.com/nats-io/nats.go/jetstream"
@@ -38,13 +37,13 @@ func New(ctx context.Context, config config.Config, logger *zap.Logger) (*Client
 	}, nil
 }
 
-func (c *Client) RunConsumers(ctx context.Context, citiesHandler *citieshandlers.Handler, routesHandler *routeshandlers.Handler) error {
-	citiesCtx, err := natsutils.RunConsumer(ctx, c.Streams.Cities, "service-cities", citiesHandler, c.Logger)
+func (c *Client) RunConsumers(ctx context.Context, queueHandler *queuehandlers.Handler) error {
+	citiesCtx, err := natsutils.RunConsumer(ctx, c.Streams.Cities, "worker-cities", queueHandler, c.Logger)
 	if err != nil {
 		return fmt.Errorf("natsutils.RunConsumer: %w", err)
 	}
 
-	tripsCtx, err := natsutils.RunConsumer(ctx, c.Streams.Trips, "service-trips", routesHandler, c.Logger)
+	tripsCtx, err := natsutils.RunConsumer(ctx, c.Streams.Trips, "worker-trips", queueHandler, c.Logger)
 	if err != nil {
 		return fmt.Errorf("natsutils.RunConsumer: %w", err)
 	}

@@ -20,6 +20,9 @@ test-data: up
 run:
 	go run ./cmd/service/main.go --envFile=configs/.env.service.local
 
+run-worker:
+	go run ./cmd/worker/main.go --envFile=configs/.env.worker.local
+
 up-debug:
 	docker compose -f docker-compose.dev.yaml up -d
 

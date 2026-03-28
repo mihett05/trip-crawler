@@ -16,7 +16,7 @@ type Streams struct {
 func NewStreams(ctx context.Context, js JetStream) (*Streams, error) {
 	citiesStream, err := js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
 		Name:     messages.CitiesStream,
-		Subjects: []string{messages.CitiesSubjectPrefix + "*"},
+		Subjects: []string{messages.CitiesSubjectPrefix + ">"},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("js.CreateOrUpdateStream with name=%s: %w", messages.CitiesStream, err)
@@ -24,7 +24,7 @@ func NewStreams(ctx context.Context, js JetStream) (*Streams, error) {
 
 	tripsStream, err := js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
 		Name:              messages.TripsStream,
-		Subjects:          []string{messages.TripsSubjectPrefix + "*"},
+		Subjects:          []string{messages.TripsSubjectPrefix + ">", messages.SchedulesTripsSubjectPrefix + ">"},
 		AllowMsgSchedules: true,
 	})
 	if err != nil {
