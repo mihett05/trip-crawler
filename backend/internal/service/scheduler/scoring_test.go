@@ -3,6 +3,9 @@ package scheduler
 import (
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // --- tierFromPopulation ---
@@ -26,24 +29,16 @@ func TestTierFromPopulation(t *testing.T) {
 	}
 	for _, c := range cases {
 		got := tierFromPopulation(c.pop)
-		if got != c.want {
-			t.Errorf("tierFromPopulation(%d) = %v, want %v", c.pop, got, c.want)
-		}
+		assert.Equal(t, c.want, got, "tierFromPopulation(%d)", c.pop)
 	}
 }
 
 // --- normPair ---
 
 func TestNormPair(t *testing.T) {
-	if normPair(TierB, TierA) != (tierPair{TierA, TierB}) {
-		t.Error("normPair should put smaller tier first")
-	}
-	if normPair(TierA, TierB) != (tierPair{TierA, TierB}) {
-		t.Error("normPair should be idempotent when already ordered")
-	}
-	if normPair(TierC, TierC) != (tierPair{TierC, TierC}) {
-		t.Error("normPair should handle equal tiers")
-	}
+	assert.Equal(t, tierPair{TierA, TierB}, normPair(TierB, TierA), "normPair should put smaller tier first")
+	assert.Equal(t, tierPair{TierA, TierB}, normPair(TierA, TierB), "normPair should be idempotent when already ordered")
+	assert.Equal(t, tierPair{TierC, TierC}, normPair(TierC, TierC), "normPair should handle equal tiers")
 }
 
 // --- parseInterval ---
@@ -67,28 +62,17 @@ func TestParseInterval_AllBrackets(t *testing.T) {
 	}
 	for _, c := range cases {
 		got := parseInterval(c.t1, c.t2, c.daysUntil)
-		if got != c.wantInterval {
-			t.Errorf("parseInterval(%v,%v, days=%d) = %d, want %d",
-				c.t1, c.t2, c.daysUntil, got, c.wantInterval)
-		}
+		assert.Equal(t, c.wantInterval, got, "parseInterval(%v,%v, days=%d)", c.t1, c.t2, c.daysUntil)
 	}
 }
 
 func TestParseInterval_BracketBoundaries(t *testing.T) {
 	// day 14 is still "near", day 15 is "mid"
-	if parseInterval(TierA, TierA, 14) != parseInterval(TierA, TierA, 1) {
-		t.Error("day 14 should use near bracket")
-	}
-	if parseInterval(TierA, TierA, 15) == parseInterval(TierA, TierA, 14) {
-		t.Error("day 15 should switch to mid bracket")
-	}
+	assert.Equal(t, parseInterval(TierA, TierA, 1), parseInterval(TierA, TierA, 14), "day 14 should use near bracket")
+	assert.NotEqual(t, parseInterval(TierA, TierA, 14), parseInterval(TierA, TierA, 15), "day 15 should switch to mid bracket")
 	// day 45 is still "mid", day 46 is "far"
-	if parseInterval(TierA, TierA, 45) != parseInterval(TierA, TierA, 15) {
-		t.Error("day 45 should use mid bracket")
-	}
-	if parseInterval(TierA, TierA, 46) == parseInterval(TierA, TierA, 45) {
-		t.Error("day 46 should switch to far bracket")
-	}
+	assert.Equal(t, parseInterval(TierA, TierA, 15), parseInterval(TierA, TierA, 45), "day 45 should use mid bracket")
+	assert.NotEqual(t, parseInterval(TierA, TierA, 45), parseInterval(TierA, TierA, 46), "day 46 should switch to far bracket")
 }
 
 // --- shouldParse ---
@@ -97,15 +81,9 @@ func TestShouldParse_OutOfRange(t *testing.T) {
 	today := truncateToDay(time.Now())
 	conn := Connection{OriginPopulation: 2_000_000, DestPopulation: 2_000_000}
 
-	if shouldParse(conn, today, today) {
-		t.Error("daysUntil=0 should return false")
-	}
-	if shouldParse(conn, today, today.AddDate(0, 0, 91)) {
-		t.Error("daysUntil=91 should return false")
-	}
-	if shouldParse(conn, today, today.AddDate(0, 0, -1)) {
-		t.Error("past date should return false")
-	}
+	assert.False(t, shouldParse(conn, today, today), "daysUntil=0 should return false")
+	assert.False(t, shouldParse(conn, today, today.AddDate(0, 0, 91)), "daysUntil=91 should return false")
+	assert.False(t, shouldParse(conn, today, today.AddDate(0, 0, -1)), "past date should return false")
 }
 
 func TestShouldParse_NeverParsed(t *testing.T) {
@@ -116,10 +94,7 @@ func TestShouldParse_NeverParsed(t *testing.T) {
 		LastParsedAt:     time.Time{}, // zero = never parsed
 		LastUsedAt:       today,
 	}
-	// should always parse if never parsed before
-	if !shouldParse(conn, today, today.AddDate(0, 0, 1)) {
-		t.Error("never-parsed connection should always be enqueued")
-	}
+	require.True(t, shouldParse(conn, today, today.AddDate(0, 0, 1)), "never-parsed connection should always be enqueued")
 }
 
 func TestShouldParse_IntervalNotElapsed(t *testing.T) {
@@ -131,9 +106,7 @@ func TestShouldParse_IntervalNotElapsed(t *testing.T) {
 		LastParsedAt:     today,
 		LastUsedAt:       today,
 	}
-	if shouldParse(conn, today, today.AddDate(0, 0, 1)) {
-		t.Error("parsed today, interval=1: should not re-parse on same day")
-	}
+	assert.False(t, shouldParse(conn, today, today.AddDate(0, 0, 1)), "parsed today, interval=1: should not re-parse on same day")
 }
 
 func TestShouldParse_IntervalElapsed(t *testing.T) {
@@ -145,9 +118,7 @@ func TestShouldParse_IntervalElapsed(t *testing.T) {
 		LastParsedAt:     today.AddDate(0, 0, -2),
 		LastUsedAt:       today,
 	}
-	if !shouldParse(conn, today, today.AddDate(0, 0, 20)) {
-		t.Error("parsed 2 days ago, mid interval=2: should parse now")
-	}
+	require.True(t, shouldParse(conn, today, today.AddDate(0, 0, 20)), "parsed 2 days ago, mid interval=2: should parse now")
 }
 
 func TestShouldParse_SleepMode(t *testing.T) {
@@ -162,15 +133,11 @@ func TestShouldParse_SleepMode(t *testing.T) {
 
 	// Normal A↔A near interval = 1. Parsed 10 days ago → would normally parse.
 	// But in sleep mode, interval = 21. 10 < 21 → should NOT parse.
-	if shouldParse(conn, today, today.AddDate(0, 0, 5)) {
-		t.Error("sleep mode: 10 days since last parse < 21 day interval, should not parse")
-	}
+	assert.False(t, shouldParse(conn, today, today.AddDate(0, 0, 5)), "sleep mode: 10 days since last parse < 21 day interval, should not parse")
 
 	// Parsed 21 days ago → sleep interval elapsed → should parse.
 	conn.LastParsedAt = today.AddDate(0, 0, -21)
-	if !shouldParse(conn, today, today.AddDate(0, 0, 5)) {
-		t.Error("sleep mode: 21 days since last parse = interval, should parse")
-	}
+	require.True(t, shouldParse(conn, today, today.AddDate(0, 0, 5)), "sleep mode: 21 days since last parse = interval, should parse")
 }
 
 func TestShouldParse_NotSleeping(t *testing.T) {
@@ -183,9 +150,7 @@ func TestShouldParse_NotSleeping(t *testing.T) {
 		LastUsedAt:       today.AddDate(0, 0, -29),
 	}
 	// A↔A near interval = 1; parsed 1 day ago → should parse
-	if !shouldParse(conn, today, today.AddDate(0, 0, 5)) {
-		t.Error("29 days unused is not sleeping; normal interval should apply")
-	}
+	require.True(t, shouldParse(conn, today, today.AddDate(0, 0, 5)), "29 days unused is not sleeping; normal interval should apply")
 }
 
 // --- computePriority ---
@@ -196,9 +161,7 @@ func TestComputePriority_Ordering(t *testing.T) {
 	prioHigh := computePriority(Connection{OriginPopulation: 2_000_000, DestPopulation: 2_000_000}, today.AddDate(0, 0, 1))
 	prioLow := computePriority(Connection{OriginPopulation: 50_000, DestPopulation: 50_000}, today.AddDate(0, 0, 90))
 
-	if prioHigh >= prioLow {
-		t.Errorf("A↔A near (%d) should have lower priority number than D↔D far (%d)", prioHigh, prioLow)
-	}
+	assert.Less(t, prioHigh, prioLow, "A↔A near (%d) should have lower priority number than D↔D far (%d)", prioHigh, prioLow)
 }
 
 func TestComputePriority_TierScoreContribution(t *testing.T) {
@@ -209,7 +172,6 @@ func TestComputePriority_TierScoreContribution(t *testing.T) {
 	prioBB := computePriority(Connection{OriginPopulation: 750_000, DestPopulation: 750_000}, dep)
 	prioDD := computePriority(Connection{OriginPopulation: 50_000, DestPopulation: 50_000}, dep)
 
-	if !(prioAA < prioBB && prioBB < prioDD) {
-		t.Errorf("priority order should be AA < BB < DD, got %d %d %d", prioAA, prioBB, prioDD)
-	}
+	assert.Less(t, prioAA, prioBB, "priority order should be AA < BB, got %d %d", prioAA, prioBB)
+	assert.Less(t, prioBB, prioDD, "priority order should be BB < DD, got %d %d", prioBB, prioDD)
 }
