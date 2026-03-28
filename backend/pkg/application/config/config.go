@@ -12,6 +12,7 @@ type Config struct {
 	HTTP             HTTPConfig          `envPrefix:"HTTP_"`
 	Observability    ObservabilityConfig `envPrefix:"OBSERVABILITY_"`
 	DGraphConnection string              `env:"DGRAPH_CONNECTION"`
+	NatsURL          string              `env:"NATS_URL"`
 }
 
 func New(filename string) (Config, error) {

@@ -7,7 +7,7 @@ import (
 	"github.com/mihett05/trip-crawler/pkg/api"
 )
 
-func (h *HTTPHandler) CreateRoute(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CreateRoute(w http.ResponseWriter, r *http.Request) {
 	req, ok := api.ParseAndRespond[api.CreateRouteRequest](w, r)
 	if !ok {
 		return
