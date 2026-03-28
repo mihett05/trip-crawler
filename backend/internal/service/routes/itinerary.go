@@ -7,5 +7,5 @@ import (
 )
 
 type ItineraryBuilder interface {
-	Build(ctx context.Context, points []string, startAt int64) ([]models.RoutePoint, error)
+	Build(ctx context.Context, points []string, startAt int64, minDays, maxDays int) ([]models.RoutePoint, error)
 }

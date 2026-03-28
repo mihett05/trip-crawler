@@ -13,29 +13,53 @@ func (h *HTTPHandler) CreateRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	points, err := h.itineraryBuilder.Build(r.Context(), req.Points, req.StartDate.Unix())
+	minDays := req.DurationMinDays
+	maxDays := minDays
+	if req.DurationMaxDays != nil && *req.DurationMaxDays > minDays {
+		maxDays = *req.DurationMaxDays
+	}
+
+	route, err := h.itineraryBuilder.Build(r.Context(), req.Points, req.StartDate.Time.Unix(), minDays, maxDays)
 	if err != nil {
 		api.Write(w, api.Error{
 			Code:    api.INTERNALERROR,
-			Message: fmt.Errorf("itineraryBuilder.Build: %w", err).Error(),
+			Message: fmt.Sprintf("failed to build itinerary: %v", err),
 		}, http.StatusInternalServerError)
 		return
 	}
 
-	apiPoints := make([]api.RoutePoint, 0, len(points))
-	for _, point := range points {
+	if len(route) == 0 {
+		api.Write(w, api.Error{
+			Code:    "NOT_FOUND",
+			Message: "no routes found for the specified criteria",
+		}, http.StatusNotFound)
+		return
+	}
+
+	// Преобразуем маршрут в API-формат
+	apiPoints := make([]api.RoutePoint, 0, len(route))
+	for _, point := range route {
+		var detailsPtr *string
+		if point.Details != "" {
+			detailsPtr = &point.Details
+		}
+
+		var coordinates *api.Coordinates
+		if point.Latitude != nil && point.Longitude != nil {
+			coordinates = &api.Coordinates{
+				Latitude:  *point.Latitude,
+				Longitude: *point.Longitude,
+			}
+		}
+
 		apiPoints = append(apiPoints, api.RoutePoint{
-			Coordinates:    nil,
-			Details:        &point.Details,
-			EndTimestamp:   point.EndTimestamp,
 			Name:           point.Name,
 			StartTimestamp: point.StartTimestamp,
+			EndTimestamp:   point.EndTimestamp,
+			Details:        detailsPtr,
+			Coordinates:    coordinates,
 		})
 	}
 
-	resp := api.CreateRouteResponse{
-		Points: apiPoints,
-	}
-
-	api.Write(w, resp, http.StatusOK)
+	api.Write(w, api.CreateRouteResponse{Points: apiPoints}, http.StatusOK)
 }

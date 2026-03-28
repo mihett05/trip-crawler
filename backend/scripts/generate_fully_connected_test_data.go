@@ -137,6 +137,13 @@ func upsertCitiesAndStations(ctx context.Context, dg *dgo.Dgraph, cities []City)
 			"uid":         cBlank,
 			"dgraph.type": c.DType,
 			"city.name":   c.Name,
+			"city.location": map[string]any{
+				"type": "Point",
+				"coordinates": []float64{
+					30.0 + rand.Float64()*10.0, // Longitude
+					50.0 + rand.Float64()*10.0, // Latitude
+				},
+			},
 		}
 
 		sts := make([]map[string]any, 0, len(c.Stations))
@@ -219,44 +226,55 @@ func createTripsBetweenAllCities(
 	ctx context.Context,
 	dg *dgo.Dgraph,
 	cityNames []string,
-	cityUIDs map[string]string,
+	_ map[string]string,
 	stationUIDsByCityAndType map[string]map[string]string,
 ) {
-	// Create trips for each ordered pair (A->B, A!=B) for both transport types.
-	// Attach trips to the origin station via "departs".
-	//
-	// To keep mutation size reasonable, batch them.
 	const batchSize = 200
 	var batch []map[string]any
-
 	now := time.Now().UTC().Truncate(time.Hour)
 
 	addTrip := func(originCity, destCity, transport string, dep time.Time, arr time.Time, price float64) {
 		originStationUID := stationUIDsByCityAndType[originCity][transport]
-		destCityUID := cityUIDs[destCity]
+		// ИСПРАВЛЕНИЕ: Берем UID СТАНЦИИ в целевом городе, а не самого города
+		destStationUID := stationUIDsByCityAndType[destCity][transport]
 
-		externalID := fmt.Sprintf("%s_%s_%s_%d",
-			transport, originCity, destCity, dep.Unix(),
-		)
+		externalID := fmt.Sprintf("%s_%s_%s_%d", transport, originCity, destCity, dep.Unix())
+
+		// Генерируем билеты (Tickets)
+		tickets := []map[string]any{
+			{
+				"dgraph.type":  []string{"Ticket"},
+				"ticket.type":  "Economy",
+				"ticket.price": price,
+				"ticket.count": rand.Intn(50) + 1,
+			},
+			{
+				"dgraph.type":  []string{"Ticket"},
+				"ticket.type":  "Business",
+				"ticket.price": price * 1.5,
+				"ticket.count": rand.Intn(10) + 1,
+			},
+		}
 
 		trip := map[string]any{
 			"uid":                 fmt.Sprintf("_:trip_%d", rand.Int63()),
 			"dgraph.type":         []string{"Trip"},
 			"trip.external_id":    externalID,
-			"trip.price":          price,
 			"trip.departure_at":   dep.Format(time.RFC3339),
 			"trip.arrival_at":     arr.Format(time.RFC3339),
 			"trip.transport_type": transport,
-			"destination":         map[string]string{"uid": destCityUID},
+			"has_ticket":          tickets,
+			// ИСПРАВЛЕНИЕ: destination теперь указывает на станцию
+			"destination": map[string]string{"uid": destStationUID},
 		}
 
-		// Attach trip to station.departs by setting station node with departs edge to trip.
+		// ИСПРАВЛЕНИЕ: Привязываем рейс к СТАНЦИИ через departs
 		stationPatch := map[string]any{
 			"uid":     originStationUID,
 			"departs": []any{trip},
 		}
-		batch = append(batch, stationPatch)
 
+		batch = append(batch, stationPatch)
 		if len(batch) >= batchSize {
 			flushBatch(ctx, dg, batch)
 			batch = batch[:0]
