@@ -13,6 +13,17 @@ const (
 	baseURLTrains  = "https://ticket.rzd.ru/api/v1/railway-service/prices/train-pricing"
 )
 
+// StatusError is returned when the RZD API responds with a non-200 status code.
+// Callers can inspect Code to detect bans (429, 403).
+type StatusError struct {
+	Code int
+	Body string
+}
+
+func (e *StatusError) Error() string {
+	return fmt.Sprintf("rzd: HTTP %d: %s", e.Code, e.Body)
+}
+
 type Client struct {
 	httpClient *http.Client
 }
@@ -21,6 +32,12 @@ func NewClient(timeout time.Duration) *Client {
 	return &Client{
 		httpClient: &http.Client{Timeout: timeout},
 	}
+}
+
+// NewClientWithHTTP creates a Client using the provided *http.Client.
+// Use this to inject a proxy-configured transport.
+func NewClientWithHTTP(httpClient *http.Client) *Client {
+	return &Client{httpClient: httpClient}
 }
 
 func (c *Client) do(req *http.Request, dest interface{}) error {
@@ -35,8 +52,8 @@ func (c *Client) do(req *http.Request, dest interface{}) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, err := io.ReadAll(resp.Body)
-		return fmt.Errorf("rzd.Client.do request=%s response=%s: %w", req, string(body), err)
+		body, _ := io.ReadAll(resp.Body)
+		return &StatusError{Code: resp.StatusCode, Body: string(body)}
 	}
 
 	return json.NewDecoder(resp.Body).Decode(dest)
