@@ -2,15 +2,15 @@ package scheduler
 
 import "time"
 
-// StationLoadTask is published once daily to trigger a full city/station refresh.
+// StationLoadTask triggers a full city/station graph refresh.
 type StationLoadTask struct {
-	RequestedAt time.Time `json:"requested_at"`
+	ScheduledAt time.Time `json:"scheduled_at"` // when the task should be dispatched
 	TopN        int       `json:"top_n"`
 }
 
-// TicketParseTask is published for each (origin, destination, date) 
-// triple that the scoring matrix decides needs a refresh today.
+// TicketParseTask requests train prices for a single (origin, destination, date) triple.
 type TicketParseTask struct {
+	ScheduledAt     time.Time `json:"scheduled_at"` // when the task should be dispatched
 	OriginCode      string    `json:"origin_code"`
 	DestinationCode string    `json:"destination_code"`
 	DepartureDate   time.Time `json:"departure_date"`

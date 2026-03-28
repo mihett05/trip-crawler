@@ -1,145 +1,106 @@
 package scheduler
 
 import (
-	"context"
-	"fmt"
+	"math/rand/v2"
+	"sort"
 	"time"
 )
 
-// Publisher is the only messaging contract the scheduler needs.
-// The concrete implementation (NATS, in-memory for tests) is injected externally.
-type Publisher interface {
-	PublishStationLoad(ctx context.Context, task StationLoadTask) error
-	PublishTicketParse(ctx context.Context, task TicketParseTask) error
-}
-
+// Scheduler is a pure task generator. It has no I/O dependencies — it only
+// applies the scoring matrix to the connections provided by the caller and
+// returns the tasks that should be executed on the given day.
+//
+// Typical usage (called once a day by the owning service):
+//
+//	tasks := s.GenerateTicketTasks(time.Now(), connections)
+//	repo.SaveTasks(ctx, tasks)
 type Scheduler struct {
-	cfg  Config
-	repo Repository
-	pub  Publisher
+	cfg Config
 }
 
-func New(cfg Config, repo Repository, pub Publisher) *Scheduler {
-	return &Scheduler{cfg: cfg, repo: repo, pub: pub}
+func New(cfg Config) *Scheduler {
+	return &Scheduler{cfg: cfg}
 }
 
-// Run blocks until ctx is cancelled, firing two daily jobs:
-//   - jobLoadStations  at StationLoadHour:StationLoadMinute
-//   - jobEnqueueTickets at TicketEnqueueHour:TicketEnqueueMinute
-func (s *Scheduler) Run(ctx context.Context) error {
-	stationErr := make(chan error, 1)
-	ticketErr := make(chan error, 1)
-
-	go func() {
-		stationErr <- s.runDaily(ctx, s.cfg.StationLoadHour, s.cfg.StationLoadMinute, s.jobLoadStations)
-	}()
-	go func() {
-		ticketErr <- s.runDaily(ctx, s.cfg.TicketEnqueueHour, s.cfg.TicketEnqueueMinute, s.jobEnqueueTickets)
-	}()
-
-	select {
-	case err := <-stationErr:
-		return err
-	case err := <-ticketErr:
-		return err
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
-
-// runDaily waits until the next wall-clock trigger (hour:minute) and
-// calls job, then repeats every 24 hours. A job error is logged and
-// skipped so the scheduler keeps running.
-func (s *Scheduler) runDaily(ctx context.Context, hour, minute int, job func(context.Context) error) error {
-	for {
-		next := nextTrigger(hour, minute)
-		select {
-		case <-time.After(time.Until(next)):
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-
-		if err := job(ctx); err != nil {
-			// non-fatal: surface the error but keep the loop alive
-			_ = fmt.Errorf("scheduler job failed: %w", err)
-		}
-	}
-}
-
-// nextTrigger returns the next wall-clock time at which hour:minute occurs.
-// If that time has already passed today it returns tomorrow's occurrence.
-func nextTrigger(hour, minute int) time.Time {
-	now := time.Now()
-	t := time.Date(now.Year(), now.Month(), now.Day(), hour, minute, 0, 0, now.Location())
-	if !t.After(now) {
-		t = t.Add(24 * time.Hour)
-	}
-	return t
-}
-
-// jobLoadStations publishes a single StationLoadTask for the worker to refresh
-// the city/station/connection graph.
-func (s *Scheduler) jobLoadStations(ctx context.Context) error {
-	task := StationLoadTask{
-		RequestedAt: time.Now(),
+// GenerateStationTask returns the daily task that triggers a full city/station
+// graph refresh. Always returns exactly one task scheduled for the start of today.
+func (s *Scheduler) GenerateStationTask(today time.Time) StationLoadTask {
+	return StationLoadTask{
+		ScheduledAt: truncateToDay(today),
 		TopN:        s.cfg.TopNCities,
 	}
-	return s.pub.PublishStationLoad(ctx, task)
 }
 
-// jobEnqueueTickets queries all known connections and, for each (connection, date)
-// pair that the scoring matrix decides needs a refresh, publishes a TicketParseTask.
-func (s *Scheduler) jobEnqueueTickets(ctx context.Context) error {
-	today := truncateToDay(time.Now())
+// GenerateTicketTasks returns all ticket-parse tasks for today.
+//
+// Steps:
+//  1. Collect every (connection, date) pair the scoring matrix selects.
+//  2. Sort by Priority ascending so the most important tasks run first.
+//  3. Split into buckets of random size [BucketSizeMin, BucketSizeMax].
+//     All tasks in the same bucket share a ScheduledAt timestamp.
+//  4. Between consecutive buckets add a random pause [BucketPauseMin, BucketPauseMax].
+//
+// The result is a steady trickle of small bursts spread across the day,
+// keeping the request rate well below RZD's ban threshold.
+func (s *Scheduler) GenerateTicketTasks(today time.Time, connections []Connection) []TicketParseTask {
+	today = truncateToDay(today)
 
-	connections, err := s.repo.GetTopConnections(ctx, s.cfg.TopNCities)
-	if err != nil {
-		return fmt.Errorf("repo.GetTopConnections: %w", err)
-	}
-
-	throttle := time.NewTicker(time.Second / time.Duration(s.cfg.PublishRatePerSec))
-	defer throttle.Stop()
-
+	var tasks []TicketParseTask
 	for _, conn := range connections {
-		anyPublished := false
-
 		for daysAhead := 1; daysAhead <= s.cfg.DaysAhead; daysAhead++ {
 			date := today.AddDate(0, 0, daysAhead)
 			if !shouldParse(conn, today, date) {
 				continue
 			}
-
-			task := TicketParseTask{
+			tasks = append(tasks, TicketParseTask{
 				OriginCode:      conn.OriginCode,
 				DestinationCode: conn.DestinationCode,
 				DepartureDate:   date,
 				Priority:        computePriority(conn, date),
-			}
-
-			select {
-			case <-throttle.C:
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-
-			if err := s.pub.PublishTicketParse(ctx, task); err != nil {
-				return fmt.Errorf("pub.PublishTicketParse (%s->%s %s): %w",
-					conn.OriginCode, conn.DestinationCode, date.Format(time.DateOnly), err)
-			}
-			anyPublished = true
-		}
-
-		if anyPublished {
-			if err := s.repo.MarkParsed(ctx, conn.OriginCode, conn.DestinationCode, today); err != nil {
-				return fmt.Errorf("repo.MarkParsed (%s->%s): %w",
-					conn.OriginCode, conn.DestinationCode, err)
-			}
+			})
 		}
 	}
 
-	return nil
+	if len(tasks) == 0 {
+		return tasks
+	}
+
+	sort.Slice(tasks, func(i, j int) bool {
+		return tasks[i].Priority < tasks[j].Priority
+	})
+
+	s.assignScheduledAt(tasks, today)
+
+	return tasks
 }
 
-func truncateToDay(t time.Time) time.Time {
-	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+// assignScheduledAt walks the sorted task slice, groups tasks into random-sized
+// buckets, and stamps each bucket with the same ScheduledAt.
+func (s *Scheduler) assignScheduledAt(tasks []TicketParseTask, start time.Time) {
+	cursor := start
+	for i := 0; i < len(tasks); {
+		bucketSize := randBetween(s.cfg.BucketSizeMin, s.cfg.BucketSizeMax)
+		end := min(i+bucketSize, len(tasks))
+
+		for j := i; j < end; j++ {
+			tasks[j].ScheduledAt = cursor
+		}
+
+		i = end
+		cursor = cursor.Add(randDuration(s.cfg.BucketPauseMin, s.cfg.BucketPauseMax))
+	}
+}
+
+func randBetween(lo, hi int) int {
+	if lo >= hi {
+		return lo
+	}
+	return lo + rand.IntN(hi-lo+1)
+}
+
+func randDuration(lo, hi time.Duration) time.Duration {
+	if lo >= hi {
+		return lo
+	}
+	return lo + time.Duration(rand.Int64N(int64(hi-lo+1)))
 }
