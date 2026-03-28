@@ -22,20 +22,27 @@ func (r *Repository) InitSchema(ctx context.Context) error {
 	op := &api.Operation{
 		Schema: `
 			city.name: string @index(term) .
+			city.location: geo @index(geo) .
+			city.updated_at: datetime .
 			station.name: string @index(term) .
-			station.transport_type: string @index(exact) .
+			station.transport_type: string @index(term) .
 			trip.external_id: string @index(exact) .
-			trip.price: float @index(float) .
 			trip.departure_at: datetime @index(hour) .
 			trip.arrival_at: datetime .
-			trip.transport_type: string @index(exact) .
+			trip.price: float @index(float) .
+			ticket.type: string .
+			ticket.price: float @index(float) .
+			ticket.count: int .
 
 			has_station: [uid] @reverse .
 			departs: [uid] @reverse .
+			has_ticket: [uid] .
 			destination: uid .
 
 			type City {
 				city.name
+				city.location
+				city.updated_at
 				has_station
 			}
 
@@ -47,11 +54,17 @@ func (r *Repository) InitSchema(ctx context.Context) error {
 
 			type Trip {
 				trip.external_id
-				trip.price
 				trip.departure_at
 				trip.arrival_at
-				trip.transport_type
+				trip.price
+				has_ticket
 				destination
+			}
+
+			type Ticket {
+				ticket.type
+				ticket.price
+				ticket.count
 			}
 		`,
 	}
@@ -62,14 +75,17 @@ func (r *Repository) InitSchema(ctx context.Context) error {
 }
 
 func (r *Repository) SaveTrip(ctx context.Context, trip *models.Trip) error {
+	query := fmt.Sprintf(`{
+		v as var(func: eq(trip.external_id, "%s"))
+	}`, trip.ExternalID)
+
 	dto := &TripDTO{
-		Uid:           trip.ID,
-		ExternalID:    trip.ExternalID,
-		Price:         trip.Price,
-		DepartureAt:   trip.DepartureAt,
-		ArrivalAt:     trip.ArrivalAt,
-		TransportType: trip.TransportType,
-		Type:          []string{"Trip"},
+		Uid:         "uid(v)",
+		ExternalID:  trip.ExternalID,
+		DepartureAt: trip.DepartureAt,
+		ArrivalAt:   trip.ArrivalAt,
+		Type:        []string{"Trip"},
+		Price:       trip.Price,
 	}
 
 	if trip.Destination != nil {
@@ -84,14 +100,19 @@ func (r *Repository) SaveTrip(ctx context.Context, trip *models.Trip) error {
 		return fmt.Errorf("marshal trip (ID: %s): json.Marshal: %w", trip.ExternalID, err)
 	}
 
-	mutation := &api.Mutation{
-		SetJson:   tripJSON,
+	mu := &api.Mutation{
+		SetJson: tripJSON,
+	}
+
+	req := &api.Request{
+		Query:     query,
+		Mutations: []*api.Mutation{mu},
 		CommitNow: true,
 	}
 
-	_, err = txn.Mutate(ctx, mutation)
+	_, err = txn.Do(ctx, req)
 	if err != nil {
-		return fmt.Errorf("txn.Mutate: %w", err)
+		return fmt.Errorf("txn.Do: %w", err)
 	}
 
 	return nil
@@ -108,7 +129,10 @@ func (r *Repository) GetCityStations(ctx context.Context, cityName string) ([]mo
 		}
 	}`
 
-	resp, err := r.dg.Client.NewTxn().QueryWithVars(ctx, query, map[string]string{"$name": cityName})
+	txn := r.dg.Client.NewTxn()
+	defer txn.Discard(ctx)
+
+	resp, err := txn.QueryWithVars(ctx, query, map[string]string{"$name": cityName})
 	if err != nil {
 		return nil, fmt.Errorf("txn.QueryWithVars (City: %s): %w", cityName, err)
 	}
@@ -153,7 +177,10 @@ func (r *Repository) GetStationDepartures(ctx context.Context, stationID string)
 		}
 	}`, stationID)
 
-	resp, err := r.dg.Client.NewTxn().Query(ctx, query)
+	txn := r.dg.Client.NewTxn()
+	defer txn.Discard(ctx)
+
+	resp, err := txn.Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("txn.Query: %w", err)
 	}
@@ -188,7 +215,11 @@ func (r *Repository) GetStationDepartures(ctx context.Context, stationID string)
 
 func (r *Repository) GetNodeByID(ctx context.Context, uid string) ([]byte, error) {
 	query := fmt.Sprintf(`{ node(func: uid(%s)) { uid dgraph.type expand(_all_) } }`, uid)
-	resp, err := r.dg.Client.NewTxn().Query(ctx, query)
+
+	txn := r.dg.Client.NewTxn()
+	defer txn.Discard(ctx)
+
+	resp, err := txn.Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("txn.Query (UID: %s): %w", uid, err)
 	}
@@ -202,7 +233,10 @@ func (r *Repository) HasConnection(ctx context.Context, fromUID, toUID string) (
 		}
 	}`, fromUID, toUID)
 
-	resp, err := r.dg.Client.NewTxn().Query(ctx, query)
+	txn := r.dg.Client.NewTxn()
+	defer txn.Discard(ctx)
+
+	resp, err := txn.Query(ctx, query)
 	if err != nil {
 		return false, fmt.Errorf("txn.Query: %w", err)
 	}
@@ -218,6 +252,49 @@ func (r *Repository) HasConnection(ctx context.Context, fromUID, toUID string) (
 	}
 
 	if len(decode.Check) > 0 && len(decode.Check[0].Departs) > 0 {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (r *Repository) HasCityConnection(ctx context.Context, fromCity, toCity string) (bool, error) {
+	query := `query all($from: string, $to: string) {
+		from_stations as var(func: eq(city.name, $from)) {
+			has_station
+		}
+		to_stations as var(func: eq(city.name, $to)) {
+			has_station
+		}
+		trips(func: uid(from_stations)) {
+			departs @filter(uid_in(destination, to_stations)) {
+				uid
+			}
+		}
+	}`
+
+	txn := r.dg.Client.NewTxn()
+	defer txn.Discard(ctx)
+
+	resp, err := txn.QueryWithVars(ctx, query, map[string]string{
+		"$from": fromCity,
+		"$to":   toCity,
+	})
+	if err != nil {
+		return false, fmt.Errorf("txn.QueryWithVars: %w", err)
+	}
+
+	var decode struct {
+		Trips []struct {
+			Departs []interface{} `json:"departs"`
+		} `json:"trips"`
+	}
+
+	if err := json.Unmarshal(resp.Json, &decode); err != nil {
+		return false, fmt.Errorf("json.Unmarshal: %w", err)
+	}
+
+	if len(decode.Trips) > 0 && len(decode.Trips[0].Departs) > 0 {
 		return true, nil
 	}
 
