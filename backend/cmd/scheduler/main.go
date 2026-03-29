@@ -37,7 +37,7 @@ func main() {
 		})
 	case "trips":
 		// TODO: сделать загрузку из репозитория
-		rawTasks, err := LoadConnections("connections.json")
+		rawTasks, err := LoadConnections("./cmd/scheduler/connections.json")
 		if err != nil {
 			panic(err)
 		}
@@ -45,13 +45,16 @@ func main() {
 		tasks := app.Scheduler.GenerateTicketTasks(time.Now(), rawTasks)
 		fmt.Println("[scheduler] loaded", len(tasks), "tasks")
 		for _, task := range tasks {
-			app.RoutesQueue.ScheduleTrip(ctx, messages.TripRequested{
+			err = app.RoutesQueue.ScheduleTrip(ctx, messages.TripRequested{
 				DepartStation:        task.OriginCode,
 				DepartStationID:      "", // из репозитория
 				DepartureAtTimestamp: task.DepartureDate.Unix(),
 				DestinationStation:   task.DestinationCode,
 				DestinationStationID: "", // из репозитория
-			}, task.ScheduledAt)
+			}, time.Now().Add(-5*time.Hour))
+			if err != nil {
+				panic(err)
+			}
 		}
 	default:
 		panic("unknown mode: " + *mode)

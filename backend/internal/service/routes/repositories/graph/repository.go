@@ -21,10 +21,10 @@ func NewRepository(dg *dgraph.Client) *Repository {
 func (r *Repository) InitSchema(ctx context.Context) error {
 	op := &api.Operation{
 		Schema: `
-			city.name: string @index(term) .
+			city.name: string @index(exact, term) .
 			city.location: geo @index(geo) .
 			city.updated_at: datetime .
-			station.name: string @index(term) .
+			station.name: string @index(exact, term) .
 			station.transport_type: string @index(term) .
 			station.external_id: string @index(exact) .
 			station.connected: [uid] .
@@ -79,21 +79,30 @@ func (r *Repository) InitSchema(ctx context.Context) error {
 }
 
 func (r *Repository) SaveTrip(ctx context.Context, trip *models.Trip) error {
+	destExternalID := ""
+	if trip.Destination != nil {
+		destExternalID = trip.Destination.ID
+	}
+
 	query := fmt.Sprintf(`{
-		v as var(func: eq(trip.external_id, "%s"))
-	}`, trip.ExternalID)
+    t_v as var(func: eq(trip.external_id, "%s"))
+    dest_v as var(func: eq(station.external_id, "%s"))
+  }`, trip.ExternalID, destExternalID)
 
 	tripDTO := &TripDTO{
-		Uid:         "uid(v)",
-		ExternalID:  trip.ExternalID,
-		DepartureAt: trip.DepartureAt,
-		ArrivalAt:   trip.ArrivalAt,
-		Type:        []string{"Trip"},
-		Price:       trip.Price,
+		Uid:           "uid(t_v)",
+		ExternalID:    trip.ExternalID,
+		DepartureAt:   trip.DepartureAt,
+		ArrivalAt:     trip.ArrivalAt,
+		Type:          []string{"Trip"},
+		Price:         trip.Price,
+		TransportType: trip.TransportType,
 	}
 
 	if trip.Destination != nil {
-		tripDTO.Destination = &StationDTO{Uid: trip.Destination.ID}
+		tripDTO.Destination = &StationDTO{
+			Uid: "uid(dest_v)",
+		}
 	}
 
 	transaction := r.dg.Client.NewTxn()
@@ -101,22 +110,18 @@ func (r *Repository) SaveTrip(ctx context.Context, trip *models.Trip) error {
 
 	tripJSON, err := json.Marshal(tripDTO)
 	if err != nil {
-		return fmt.Errorf("marshal trip (ID: %s): json.Marshal: %w", trip.ExternalID, err)
-	}
-
-	mutation := &api.Mutation{
-		SetJson: tripJSON,
+		return fmt.Errorf("marshal trip (ID: %s): %w", trip.ExternalID, err)
 	}
 
 	request := &api.Request{
 		Query:     query,
-		Mutations: []*api.Mutation{mutation},
+		Mutations: []*api.Mutation{{SetJson: tripJSON}},
 		CommitNow: true,
 	}
 
 	_, err = transaction.Do(ctx, request)
 	if err != nil {
-		return fmt.Errorf("transaction.Do: %w", err)
+		return fmt.Errorf("transaction.Do (Trip: %s): %w", trip.ExternalID, err)
 	}
 
 	return nil
@@ -316,18 +321,25 @@ func (r *Repository) HasCityConnection(ctx context.Context, fromCity, toCity str
 }
 
 func (r *Repository) SaveCity(ctx context.Context, city *models.City) error {
+	var stationQueries string
+	for i, s := range city.Stations {
+		stationQueries += fmt.Sprintf("st%d as var(func: eq(station.external_id, \"%s\"))\n", i, s.ExternalID)
+	}
+
 	query := fmt.Sprintf(`{
-		v as var(func: eq(city.name, "%s"))
-	}`, city.Name)
+        city_v as var(func: eq(city.name, "%s"))
+        %s
+    }`, city.Name, stationQueries)
 
 	stationsDTO := make([]StationDTO, 0, len(city.Stations))
-	for _, station := range city.Stations {
+	for i, station := range city.Stations {
 		links := make([]StationLinkDTO, 0, len(station.ConnectedStationsID))
 		for _, id := range station.ConnectedStationsID {
 			links = append(links, StationLinkDTO{Uid: id})
 		}
 
 		stationDTO := StationDTO{
+			Uid:               fmt.Sprintf("uid(st%d)", i),
 			Name:              station.Name,
 			TransportType:     station.TransportType,
 			Type:              []string{"Station"},
@@ -335,18 +347,11 @@ func (r *Repository) SaveCity(ctx context.Context, city *models.City) error {
 			ExternalID:        station.ExternalID,
 		}
 
-		if station.ExternalID != "" {
-			stationDTO.Uid = fmt.Sprintf("_:station_%s", station.ExternalID)
-		} else if station.ID != "" {
-			stationDTO.Uid = station.ID
-		} else {
-			stationDTO.Uid = fmt.Sprintf("_:station_%s", station.Name)
-		}
-
 		stationsDTO = append(stationsDTO, stationDTO)
 	}
+
 	cityDTO := &CityDTO{
-		Uid:  "uid(v)",
+		Uid:  "uid(city_v)",
 		Name: city.Name,
 		Type: []string{"City"},
 		Location: GeoJSON{
@@ -364,13 +369,9 @@ func (r *Repository) SaveCity(ctx context.Context, city *models.City) error {
 		return fmt.Errorf("marshal city (name: %s): %w", city.Name, err)
 	}
 
-	mutation := &api.Mutation{
-		SetJson: cityJSON,
-	}
-
 	request := &api.Request{
 		Query:     query,
-		Mutations: []*api.Mutation{mutation},
+		Mutations: []*api.Mutation{{SetJson: cityJSON}},
 		CommitNow: true,
 	}
 
@@ -381,7 +382,6 @@ func (r *Repository) SaveCity(ctx context.Context, city *models.City) error {
 
 	return nil
 }
-
 func (r *Repository) GetAllStations(ctx context.Context) (map[string]*models.Station, error) {
 	query := `{
 		stations(func: type(Station)) {

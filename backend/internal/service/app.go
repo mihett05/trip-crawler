@@ -40,6 +40,8 @@ type App struct {
 	CitiesNATSHandler *citiesnatshandlers.Handler
 	RoutesNATSHandler *routesnatshandlers.Handler
 
+	RoutesService *routes.Service
+
 	Scheduler *scheduler.Scheduler
 }
 
@@ -92,6 +94,7 @@ func New(ctx context.Context, envFileName string) (*App, error) {
 		RoutesQueue:       routesQueue,
 		CitiesNATSHandler: citiesNATSHandler,
 		RoutesNATSHandler: routesNATSHandler,
+		RoutesService:     routesService,
 		Scheduler:         scheduler,
 		Server: &http.Server{
 			Addr:         fmt.Sprintf(":%d", app.Config.HTTP.Port),

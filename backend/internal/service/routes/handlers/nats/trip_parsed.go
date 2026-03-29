@@ -31,6 +31,7 @@ func (h *Handler) HandleTripParsed(ctx context.Context, request messages.TripPar
 	if err := h.service.SaveTrip(ctx, tripModel); err != nil {
 		return fmt.Errorf("failed to save trip %s: %w", t.ExternalID, err)
 	}
+	fmt.Println("saved trip", *tripModel)
 
 	return nil
 }

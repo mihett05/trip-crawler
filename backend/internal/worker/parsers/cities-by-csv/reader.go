@@ -1,23 +1,21 @@
 package city
 
 import (
+	"bytes"
 	"encoding/csv"
 	"io"
-	"os"
+
+	"github.com/mihett05/trip-crawler/internal/worker/parsers/cities-by-csv/static"
 )
 
 // GetRoutesFromCSV читает CSV и возвращает список маршрутов (откуда -> куда)
-func GetRoutesFromCSV(filePath string) ([]StationRoute, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
+func GetRoutesFromCSV() ([]StationRoute, error) {
+	bytesReader := bytes.NewReader(static.Data)
 
-	reader := csv.NewReader(file)
+	reader := csv.NewReader(bytesReader)
 	reader.Comma = ';'
 
-	if _, err = reader.Read(); err != nil {
+	if _, err := reader.Read(); err != nil {
 		return nil, err
 	}
 
