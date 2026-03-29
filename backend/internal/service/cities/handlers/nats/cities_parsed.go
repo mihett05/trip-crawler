@@ -18,7 +18,6 @@ func (h *Handler) HandleCitiesParsed(ctx context.Context, request messages.Citie
 
 		for _, s := range c.Stations {
 			station := &models.Station{
-				ID:                  s.ID,
 				ExternalID:          s.ID,
 				Name:                s.Name,
 				TransportType:       s.TransportType,
