@@ -4,6 +4,7 @@
  */
 
 import fetch from '../../client.ts';
+//@ts-ignore
 import type { Client, RequestConfig, ResponseErrorConfig } from '../../client.ts';
 import type { GetCitiesQueryResponse, GetCities500 } from '../types/GetCities.ts';
 

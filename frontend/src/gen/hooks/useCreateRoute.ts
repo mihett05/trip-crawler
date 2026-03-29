@@ -30,6 +30,7 @@ export function createRouteMutationOptions<TContext = unknown>(
   >({
     mutationKey,
     mutationFn: async ({ data }) => {
+      //@ts-ignore
       return createRoute(data, config);
     },
   });

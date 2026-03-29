@@ -23,7 +23,7 @@ function App() {
               fontWeight: 600,
             }}
           >
-            Trip Planner
+            Trip Crawler
           </Typography>
           <LanguageSwitcher />
         </Toolbar>

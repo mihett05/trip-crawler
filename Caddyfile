@@ -1,0 +1,11 @@
+:80
+
+handle /api/* {
+    reverse_proxy backend-service:8888
+}
+
+handle {
+    root * /usr/share/nginx/html
+    file_server
+    try_files {path} {path}/ /index.html
+}

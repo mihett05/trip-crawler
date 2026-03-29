@@ -8,6 +8,9 @@ export interface TripSegment {
   arrivalDate: string; // ISO date string
   departureDate: string; // ISO date string
   duration: number; // number of days
+  price: number;
+  transportType: 'train' | 'bus' | 'airplane';
+  availableAmount: number;
 }
 
 export interface TripDetails {
@@ -26,7 +29,8 @@ export const convertFormDataToApiRequest = (formData: {
   middleCities: string[];
   destinationCity: string;
   startDate: Date | null;
-  tripDuration: number;
+  minDays: number;
+  maxDays: number;
 }): CreateRouteRequest => {
   if (formData.startDate === null) {
     throw new Error('Start date is required');
@@ -41,8 +45,8 @@ export const convertFormDataToApiRequest = (formData: {
   return {
     points,
     startDate: formData.startDate.toISOString().split('T')[0], // Convert to YYYY-MM-DD format
-    durationMinDays: formData.tripDuration,
-    durationMaxDays: formData.tripDuration + 7, // Add buffer of 7 days maximum
+    durationMinDays: formData.minDays,
+    durationMaxDays: formData.maxDays,
   };
 };
 
@@ -54,7 +58,6 @@ export const convertApiToTripDetails = (
     middleCities: string[];
     destinationCity: string;
     startDate: Date | null;
-    tripDuration: number;
   },
 ): TripDetails => {
   if (!formData.startDate) {
@@ -83,6 +86,9 @@ export const convertApiToTripDetails = (
       arrivalDate,
       departureDate,
       duration: Math.max(1, duration),
+      price: point.price,
+      transportType: point.transportType,
+      availableAmount: point.availableAmount,
     };
   });
 
@@ -95,7 +101,7 @@ export const convertApiToTripDetails = (
     id: Date.now(),
     route,
     totalDistance: route.length * 500, // Placeholder calculation
-    totalDays: formData.tripDuration,
+    totalDays: route.reduce((total, segment) => total + segment.duration, 0),
     origin,
     destination,
     stops,
@@ -109,12 +115,12 @@ export const fetchCitySuggestions = async (input: string): Promise<string[]> => 
   try {
     // Get all cities from the API
     const response = await getCities();
-    
+
     // Extract cities array from response (the API returns { cities: [] })
     const allCities = response.cities || [];
-    
+
     if (!input) return allCities.slice(0, 10); // Return first 10 if no input
-    
+
     const lowerInput = input.toLowerCase();
     return allCities.filter((city) => city?.toLowerCase().includes(lowerInput)).slice(0, 5); // Return max 5 suggestions
   } catch (error) {
@@ -132,9 +138,9 @@ export const fetchCitySuggestions = async (input: string): Promise<string[]> => 
       'Barcelona',
       'Milan',
     ];
-    
+
     if (!input) return fallbackCities;
-    
+
     const lowerInput = input.toLowerCase();
     return fallbackCities.filter((city) => city.toLowerCase().includes(lowerInput)).slice(0, 5);
   }

@@ -5,7 +5,7 @@ import { initReactI18next } from 'react-i18next';
 const en = {
   translation: {
     // Заголовки
-    appTitle: 'Plan Your Dream Trip',
+    appTitle: 'Trip Crawler',
     appSubtitle: 'Discover amazing destinations and create unforgettable memories',
     routeDetails: 'Route Details',
     tripRouteMap: 'Trip Route Map',
@@ -15,7 +15,6 @@ const en = {
     to: 'To',
     addStopoverCity: 'Add Stopover City',
     departureDate: 'Departure Date',
-    tripLength: 'Trip Length',
     stopoverCities: 'Stopover Cities (up to 3)',
 
     // Кнопки
@@ -32,7 +31,6 @@ const en = {
     startingCityRequired: 'Starting city is required',
     destinationCityRequired: 'Destination city is required',
     startDateRequired: 'Start date is required',
-    tripDurationMin: 'Trip duration must be at least 1 day',
 
     // Вспомогательные тексты
     citiesAdded: '{{count}}/3 cities added',
@@ -72,6 +70,19 @@ const en = {
     october: 'Oct',
     november: 'Nov',
     december: 'Dec',
+
+    // Transport types
+    train: 'Train',
+    bus: 'Bus',
+    airplane: 'Airplane',
+    transportType: 'Transport Type',
+    availableTickets: 'Available Tickets',
+    price: 'Price',
+
+    // Min/Max Days
+    minDays: 'Min Days',
+    maxDays: 'Max Days',
+    minMaxError: 'Max days must be greater than or equal to min days',
   },
 };
 
@@ -79,7 +90,7 @@ const en = {
 const ru = {
   translation: {
     // Заголовки
-    appTitle: 'Спланируйте свою поездку мечты',
+    appTitle: 'Поиск поездок',
     appSubtitle:
       'Откройте для себя удивительные достопримечательности и создайте незабываемые воспоминания',
     routeDetails: 'Детали маршрута',
@@ -90,7 +101,6 @@ const ru = {
     to: 'Куда',
     addStopoverCity: 'Добавить промежуточный город',
     departureDate: 'Дата отправления',
-    tripLength: 'Продолжительность поездки',
     stopoverCities: 'Промежуточные города (до 3)',
 
     // Кнопки
@@ -107,7 +117,6 @@ const ru = {
     startingCityRequired: 'Необходимо указать город начала',
     destinationCityRequired: 'Необходимо указать город назначения',
     startDateRequired: 'Необходимо указать дату начала',
-    tripDurationMin: 'Продолжительность поездки должна быть не менее 1 дня',
 
     // Вспомогательные тексты
     citiesAdded: '{{count}}/3 городов добавлено',
@@ -147,6 +156,19 @@ const ru = {
     october: 'Окт',
     november: 'Ноя',
     december: 'Дек',
+
+    // Типы транспорта
+    train: 'Поезд',
+    bus: 'Автобус',
+    airplane: 'Самолёт',
+    transportType: 'Тип транспорта',
+    availableTickets: 'Доступных билетов',
+    price: 'Цена',
+
+    // Мин/Макс дни
+    minDays: 'Мин дни',
+    maxDays: 'Макс дни',
+    minMaxError: 'Макс дни должны быть больше или равны мин дням',
   },
 };
 

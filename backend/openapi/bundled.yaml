@@ -140,6 +140,9 @@ components:
         - name
         - startTimestamp
         - endTimestamp
+        - price
+        - transportType
+        - availableAmount
       properties:
         name:
           type: string
@@ -162,6 +165,24 @@ components:
           description: Additional details about this route point
           example: Historical sites to visit in Rome
           nullable: true
+        price:
+          type: number
+          format: double
+          description: Price for this route segment
+          example: 1000
+        transportType:
+          type: string
+          enum:
+            - train
+            - bus
+            - airplane
+          description: Type of transport for provided route segment
+          example: train
+        availableAmount:
+          type: integer
+          format: int64
+          description: Amount of available tickets for route segment
+          example: 10
     Error:
       type: object
       required:
