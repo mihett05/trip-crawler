@@ -26,6 +26,8 @@ func (r *Repository) InitSchema(ctx context.Context) error {
 			city.updated_at: datetime .
 			station.name: string @index(term) .
 			station.transport_type: string @index(term) .
+			station.external_id: string @index(exact) .
+			station.connected: [uid] .
 			trip.external_id: string @index(exact) .
 			trip.departure_at: datetime @index(hour) .
 			trip.arrival_at: datetime .
@@ -49,6 +51,8 @@ func (r *Repository) InitSchema(ctx context.Context) error {
 			type Station {
 				station.name
 				station.transport_type
+				station.external_id
+    			station.connected
 				departs
 			}
 
@@ -120,14 +124,15 @@ func (r *Repository) SaveTrip(ctx context.Context, trip *models.Trip) error {
 
 func (r *Repository) GetCityStations(ctx context.Context, cityName string) ([]models.Station, error) {
 	query := `query all($name: string) {
-		city(func: eq(city.name, $name)) {
-			has_station {
-				uid
-				station.name
-				station.transport_type
-			}
-		}
-	}`
+        city(func: eq(city.name, $name)) {
+            has_station {
+                uid
+                station.name
+                station.transport_type
+                station.external_id
+            }
+        }
+    }`
 
 	transaction := r.dg.Client.NewTxn()
 	defer transaction.Discard(ctx)
@@ -155,6 +160,7 @@ func (r *Repository) GetCityStations(ctx context.Context, cityName string) ([]mo
 	for _, s := range decode.City[0].Stations {
 		stations = append(stations, models.Station{
 			ID:            s.Uid,
+			ExternalID:    s.ExternalID,
 			Name:          s.Name,
 			TransportType: s.TransportType,
 		})
@@ -201,13 +207,21 @@ func (r *Repository) GetStationDepartures(ctx context.Context, stationID string)
 
 	trips := make([]models.Trip, 0, len(decode.Station[0].Departs))
 	for _, t := range decode.Station[0].Departs {
-		trips = append(trips, models.Trip{
+		trip := models.Trip{
 			ID:          t.Uid,
 			ExternalID:  t.ExternalID,
 			Price:       t.Price,
 			DepartureAt: t.DepartureAt,
 			ArrivalAt:   t.ArrivalAt,
-		})
+		}
+
+		if t.Destination != nil {
+			trip.Destination = &models.Station{
+				ID:   t.Destination.Uid,
+				Name: t.Destination.Name,
+			}
+		}
+		trips = append(trips, trip)
 	}
 
 	return trips, nil
@@ -228,10 +242,10 @@ func (r *Repository) GetNodeByID(ctx context.Context, uid string) ([]byte, error
 
 func (r *Repository) HasConnection(ctx context.Context, fromUID, toUID string) (bool, error) {
 	query := fmt.Sprintf(`{
-		check(func: uid(%s)) {
-			departs @filter(uid_in(destination, %s)) { uid }
-		}
-	}`, fromUID, toUID)
+        check(func: uid(%s)) {
+            station.connected @filter(uid(%s)) { uid }
+        }
+    }`, fromUID, toUID)
 
 	transaction := r.dg.Client.NewTxn()
 	defer transaction.Discard(ctx)
@@ -243,7 +257,7 @@ func (r *Repository) HasConnection(ctx context.Context, fromUID, toUID string) (
 
 	var decode struct {
 		Check []struct {
-			Departs []interface{} `json:"departs"`
+			Connected []interface{} `json:"station.connected"`
 		} `json:"check"`
 	}
 
@@ -251,7 +265,7 @@ func (r *Repository) HasConnection(ctx context.Context, fromUID, toUID string) (
 		return false, fmt.Errorf("json.Unmarshal: %w", err)
 	}
 
-	if len(decode.Check) > 0 && len(decode.Check[0].Departs) > 0 {
+	if len(decode.Check) > 0 && len(decode.Check[0].Connected) > 0 {
 		return true, nil
 	}
 
@@ -308,14 +322,29 @@ func (r *Repository) SaveCity(ctx context.Context, city *models.City) error {
 
 	stationsDTO := make([]StationDTO, 0, len(city.Stations))
 	for _, station := range city.Stations {
-		stationsDTO = append(stationsDTO, StationDTO{
-			Uid:           fmt.Sprintf("_:station_%s", station.Name),
-			Name:          station.Name,
-			TransportType: station.TransportType,
-			Type:          []string{"Station"},
-		})
-	}
+		links := make([]StationLinkDTO, 0, len(station.ConnectedStationsID))
+		for _, id := range station.ConnectedStationsID {
+			links = append(links, StationLinkDTO{Uid: id})
+		}
 
+		stationDTO := StationDTO{
+			Name:              station.Name,
+			TransportType:     station.TransportType,
+			Type:              []string{"Station"},
+			ConnectedStations: links,
+			ExternalID:        station.ExternalID,
+		}
+
+		if station.ExternalID != "" {
+			stationDTO.Uid = fmt.Sprintf("_:station_%s", station.ExternalID)
+		} else if station.ID != "" {
+			stationDTO.Uid = station.ID
+		} else {
+			stationDTO.Uid = fmt.Sprintf("_:station_%s", station.Name)
+		}
+
+		stationsDTO = append(stationsDTO, stationDTO)
+	}
 	cityDTO := &CityDTO{
 		Uid:  "uid(v)",
 		Name: city.Name,
@@ -351,4 +380,60 @@ func (r *Repository) SaveCity(ctx context.Context, city *models.City) error {
 	}
 
 	return nil
+}
+
+func (r *Repository) GetAllStations(ctx context.Context) (map[string]*models.Station, error) {
+	query := `{
+		stations(func: type(Station)) {
+			uid
+			station.name
+			station.transport_type
+			station.external_id
+			station.connected {
+				uid
+			}
+		}
+	}`
+
+	transaction := r.dg.Client.NewTxn()
+	defer transaction.Discard(ctx)
+
+	response, err := transaction.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("transaction.Query: %w", err)
+	}
+
+	var decode struct {
+		Stations []struct {
+			Uid           string `json:"uid"`
+			Name          string `json:"station.name"`
+			TransportType string `json:"station.transport_type"`
+			ExternalID    string `json:"station.external_id"`
+			Connected     []struct {
+				Uid string `json:"uid"`
+			} `json:"station.connected"`
+		} `json:"stations"`
+	}
+
+	if err := json.Unmarshal(response.Json, &decode); err != nil {
+		return nil, fmt.Errorf("json.Unmarshal: %w", err)
+	}
+
+	stationMap := make(map[string]*models.Station)
+	for _, s := range decode.Stations {
+		links := make([]string, 0, len(s.Connected))
+		for _, link := range s.Connected {
+			links = append(links, link.Uid)
+		}
+
+		stationMap[s.Uid] = &models.Station{
+			ID:                  s.Uid,
+			ExternalID:          s.ExternalID,
+			Name:                s.Name,
+			TransportType:       s.TransportType,
+			ConnectedStationsID: links,
+		}
+	}
+
+	return stationMap, nil
 }

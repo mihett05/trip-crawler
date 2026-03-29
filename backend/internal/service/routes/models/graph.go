@@ -11,10 +11,12 @@ type City struct {
 }
 
 type Station struct {
-	ID            string
-	Name          string
-	TransportType string
-	Departs       []*Trip
+	ID                  string
+	ExternalID          string
+	Name                string
+	TransportType       string
+	ConnectedStationsID []string
+	Departs             []*Trip
 }
 
 type Trip struct {

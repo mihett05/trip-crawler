@@ -18,9 +18,11 @@ func (h *Handler) HandleCitiesParsed(ctx context.Context, request messages.Citie
 
 		for _, s := range c.Stations {
 			station := &models.Station{
-				ID:            s.ID,
-				Name:          s.Name,
-				TransportType: s.TransportType,
+				ID:                  s.ID,
+				ExternalID:          s.ID,
+				Name:                s.Name,
+				TransportType:       s.TransportType,
+				ConnectedStationsID: s.Stations,
 			}
 			cityModel.Stations = append(cityModel.Stations, station)
 		}

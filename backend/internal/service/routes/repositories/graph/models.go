@@ -23,12 +23,18 @@ type TicketDTO struct {
 }
 
 type StationDTO struct {
-	Uid           string     `json:"uid,omitempty"`
-	Type          []string   `json:"dgraph.type,omitempty"`
-	Name          string     `json:"station.name,omitempty"`
-	TransportType string     `json:"station.transport_type,omitempty"`
-	Departs       []*TripDTO `json:"departs,omitempty"`
-	City          *CityDTO   `json:"city_info,omitempty"`
+	Uid               string           `json:"uid,omitempty"`
+	ExternalID        string           `json:"station.external_id,omitempty"`
+	Type              []string         `json:"dgraph.type,omitempty"`
+	Name              string           `json:"station.name,omitempty"`
+	TransportType     string           `json:"station.transport_type,omitempty"`
+	ConnectedStations []StationLinkDTO `json:"station.connected,omitempty"`
+	Departs           []*TripDTO       `json:"departs,omitempty"`
+	City              *CityDTO         `json:"city_info,omitempty"`
+}
+
+type StationLinkDTO struct {
+	Uid string `json:"uid"`
 }
 
 type TripDTO struct {
