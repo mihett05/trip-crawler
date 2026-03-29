@@ -3,16 +3,20 @@ package handlers
 import (
 	"context"
 
+	"github.com/mihett05/trip-crawler/internal/worker/parsers/rzd"
+	"github.com/mihett05/trip-crawler/internal/worker/queue/gateways"
 	"github.com/mihett05/trip-crawler/pkg/messages"
 	natsutils "github.com/mihett05/trip-crawler/pkg/messages/nats-utils"
 	"github.com/nats-io/nats.go/jetstream"
 )
 
 type Handler struct {
+	rzd     *rzd.Client
+	gateway *gateways.Gateway
 }
 
-func New() *Handler {
-	return &Handler{}
+func New(rzdClient *rzd.Client, gateway *gateways.Gateway) *Handler {
+	return &Handler{rzd: rzdClient, gateway: gateway}
 }
 
 func (h *Handler) GetSubjects() []string {

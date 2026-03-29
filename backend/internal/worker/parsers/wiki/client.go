@@ -11,6 +11,8 @@ const wikiURL = "https://ru.wikipedia.org/wiki/Города_России"
 
 // LoadWikiPage скачивает страницу Википедии и возвращает объект для парсинга
 func LoadWikiPage() (*goquery.Document, error) {
+	fmt.Printf("[wiki] fetching %s\n", wikiURL)
+
 	req, err := http.NewRequest(http.MethodGet, wikiURL, nil)
 	if err != nil {
 		return nil, err
@@ -31,5 +33,6 @@ func LoadWikiPage() (*goquery.Document, error) {
 		return nil, fmt.Errorf("HTTP EXP: %d", resp.StatusCode)
 	}
 
+	fmt.Printf("[wiki] page fetched, status=%d\n", resp.StatusCode)
 	return goquery.NewDocumentFromReader(resp.Body)
 }

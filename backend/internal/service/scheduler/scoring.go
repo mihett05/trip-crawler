@@ -1,6 +1,8 @@
 package scheduler
 
-import "time"
+import (
+	"time"
+)
 
 // Tier classifies a city by population size.
 // Lower numeric value = larger city.

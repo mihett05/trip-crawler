@@ -3,8 +3,11 @@ package worker
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/mihett05/trip-crawler/internal/worker/core/nats"
+	"github.com/mihett05/trip-crawler/internal/worker/parsers/rzd"
+	workergateway "github.com/mihett05/trip-crawler/internal/worker/queue/gateways"
 	queuehandlers "github.com/mihett05/trip-crawler/internal/worker/queue/handlers"
 	"github.com/mihett05/trip-crawler/pkg/application"
 	"go.uber.org/zap"
@@ -27,7 +30,9 @@ func New(ctx context.Context, envFileName string) (*App, error) {
 		return nil, fmt.Errorf("nats.New: %w", err)
 	}
 
-	queueHandler := queuehandlers.New()
+	rzdClient := rzd.NewClient(30 * time.Second)
+	gateway := workergateway.New(natsClient.Connection.JetStream)
+	queueHandler := queuehandlers.New(rzdClient, gateway)
 
 	return &App{
 		App:          app,
