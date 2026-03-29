@@ -7,6 +7,7 @@ type CityDTO struct {
 	Name     string       `json:"city.name,omitempty"`
 	Location GeoJSON      `json:"city.location,omitempty"`
 	Stations []StationDTO `json:"has_station,omitempty"`
+	Type     []string     `json:"dgraph.type,omitempty"`
 }
 
 type GeoJSON struct {

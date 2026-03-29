@@ -3,6 +3,8 @@ package cities
 import (
 	"context"
 	"fmt"
+
+	"github.com/mihett05/trip-crawler/internal/service/routes/models"
 )
 
 type Service struct {
@@ -22,4 +24,11 @@ func (s *Service) GetCities(ctx context.Context) ([]string, error) {
 	}
 
 	return cities, nil
+}
+
+func (s *Service) SaveCity(ctx context.Context, city *models.City) error {
+	if err := s.repository.SaveCity(ctx, city); err != nil {
+		return fmt.Errorf("repository.SaveCity: %w", err)
+	}
+	return nil
 }

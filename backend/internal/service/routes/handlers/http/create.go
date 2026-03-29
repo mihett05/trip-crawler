@@ -36,7 +36,6 @@ func (h *Handler) CreateRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Преобразуем маршрут в API-формат
 	apiPoints := make([]api.RoutePoint, 0, len(route))
 	for _, point := range route {
 		var detailsPtr *string

@@ -3,16 +3,18 @@ package nats
 import (
 	"context"
 
+	"github.com/mihett05/trip-crawler/internal/service/cities/services/cities"
 	"github.com/mihett05/trip-crawler/pkg/messages"
 	natsutils "github.com/mihett05/trip-crawler/pkg/messages/nats-utils"
 	"github.com/nats-io/nats.go/jetstream"
 )
 
 type Handler struct {
+	service *cities.Service
 }
 
-func New() *Handler {
-	return &Handler{}
+func New(svc *cities.Service) *Handler {
+	return &Handler{service: svc}
 }
 
 func (h *Handler) GetSubjects() []string {

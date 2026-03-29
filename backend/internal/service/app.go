@@ -59,6 +59,9 @@ func New(ctx context.Context, envFileName string) (*App, error) {
 		return nil, fmt.Errorf("failed to initialize dgraph schema: %w", err)
 	}
 
+	citiesService := citiessservices.New(graphRepo)
+	routesService := routes.New(graphRepo)
+
 	natsClient, err := nats.New(ctx, app.Config, app.Observability.Logger)
 	if err != nil {
 		return nil, fmt.Errorf("nats.New: %w", err)
@@ -72,11 +75,10 @@ func New(ctx context.Context, envFileName string) (*App, error) {
 	scheduler := scheduler.New(app.Config.Scheduler)
 
 	routesHTTPHandler := routeshttphandlers.New(app.Observability.Logger, itineraryBuilder)
-	routesNATSHandler := routesnatshandlers.New()
+	routesNATSHandler := routesnatshandlers.New(routesService)
 
-	citiesService := citiessservices.New(graphRepo)
 	citiesHTTPHandler := citieshttphandlers.New(app.Observability.Logger, citiesService)
-	citiesNATSHandler := citiesnatshandlers.New()
+	citiesNATSHandler := citiesnatshandlers.New(citiesService)
 
 	httpHandler := apphttp.NewHandler(app.Config, app.Observability.Logger, routesHTTPHandler, citiesHTTPHandler)
 
