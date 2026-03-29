@@ -14,6 +14,7 @@ type Coordinates struct {
 }
 
 type CitiesRequested struct {
+	TopCities int `json:"top_cities"`
 }
 
 type CitiesParsed struct {

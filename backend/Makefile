@@ -23,6 +23,12 @@ run:
 run-worker:
 	go run ./cmd/worker/main.go --envFile=configs/.env.worker.local
 
+run-scheduler-cities:
+	go run cmd/scheduler/main.go --mode=cities --envFile=configs/.env.scheduler.local
+
+run-scheduler-trips:
+	go run cmd/scheduler/main.go --mode=cities --envFile=configs/.env.scheduler.local
+
 up-debug:
 	docker compose -f docker-compose.dev.yaml up -d
 

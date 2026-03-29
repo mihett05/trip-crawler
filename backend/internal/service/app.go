@@ -9,6 +9,7 @@ import (
 
 	"go.uber.org/zap"
 
+	citiesqueue "github.com/mihett05/trip-crawler/internal/service/cities/gateways/queue"
 	citieshttphandlers "github.com/mihett05/trip-crawler/internal/service/cities/handlers/http"
 	citiesnatshandlers "github.com/mihett05/trip-crawler/internal/service/cities/handlers/nats"
 	citiessservices "github.com/mihett05/trip-crawler/internal/service/cities/services/cities"
@@ -17,9 +18,11 @@ import (
 	"github.com/mihett05/trip-crawler/internal/service/core/nats"
 	"github.com/mihett05/trip-crawler/internal/service/routes"
 	"github.com/mihett05/trip-crawler/internal/service/routes/gateway"
+	routesqueue "github.com/mihett05/trip-crawler/internal/service/routes/gateway/queue"
 	routeshttphandlers "github.com/mihett05/trip-crawler/internal/service/routes/handlers/http"
 	routesnatshandlers "github.com/mihett05/trip-crawler/internal/service/routes/handlers/nats"
 	"github.com/mihett05/trip-crawler/internal/service/routes/repositories/graph"
+	"github.com/mihett05/trip-crawler/internal/service/scheduler"
 	"github.com/mihett05/trip-crawler/pkg/application"
 )
 
@@ -31,8 +34,13 @@ type App struct {
 	GraphRepo        *graph.Repository
 	ItineraryBuilder routes.ItineraryBuilder
 
+	CitiesQueue *citiesqueue.Gateway
+	RoutesQueue *routesqueue.Gateway
+
 	CitiesNATSHandler *citiesnatshandlers.Handler
 	RoutesNATSHandler *routesnatshandlers.Handler
+
+	Scheduler *scheduler.Scheduler
 }
 
 func New(ctx context.Context, envFileName string) (*App, error) {
@@ -58,6 +66,11 @@ func New(ctx context.Context, envFileName string) (*App, error) {
 
 	itineraryBuilder := gateway.NewDgraphItineraryBuilder(dgraphClient)
 
+	citiesQueue := citiesqueue.New(natsClient)
+	routesQueue := routesqueue.New(natsClient)
+
+	scheduler := scheduler.New(app.Config.Scheduler)
+
 	routesHTTPHandler := routeshttphandlers.New(app.Observability.Logger, itineraryBuilder)
 	routesNATSHandler := routesnatshandlers.New()
 
@@ -73,8 +86,11 @@ func New(ctx context.Context, envFileName string) (*App, error) {
 		NATS:              natsClient,
 		GraphRepo:         graphRepo,
 		ItineraryBuilder:  itineraryBuilder,
+		CitiesQueue:       citiesQueue,
+		RoutesQueue:       routesQueue,
 		CitiesNATSHandler: citiesNATSHandler,
 		RoutesNATSHandler: routesNATSHandler,
+		Scheduler:         scheduler,
 		Server: &http.Server{
 			Addr:         fmt.Sprintf(":%d", app.Config.HTTP.Port),
 			Handler:      httpHandler,
