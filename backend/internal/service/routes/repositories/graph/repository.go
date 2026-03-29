@@ -79,7 +79,7 @@ func (r *Repository) SaveTrip(ctx context.Context, trip *models.Trip) error {
 		v as var(func: eq(trip.external_id, "%s"))
 	}`, trip.ExternalID)
 
-	dto := &TripDTO{
+	tripDTO := &TripDTO{
 		Uid:         "uid(v)",
 		ExternalID:  trip.ExternalID,
 		DepartureAt: trip.DepartureAt,
@@ -89,30 +89,30 @@ func (r *Repository) SaveTrip(ctx context.Context, trip *models.Trip) error {
 	}
 
 	if trip.Destination != nil {
-		dto.Destination = &StationDTO{Uid: trip.Destination.ID}
+		tripDTO.Destination = &StationDTO{Uid: trip.Destination.ID}
 	}
 
-	txn := r.dg.Client.NewTxn()
-	defer txn.Discard(ctx)
+	transaction := r.dg.Client.NewTxn()
+	defer transaction.Discard(ctx)
 
-	tripJSON, err := json.Marshal(dto)
+	tripJSON, err := json.Marshal(tripDTO)
 	if err != nil {
 		return fmt.Errorf("marshal trip (ID: %s): json.Marshal: %w", trip.ExternalID, err)
 	}
 
-	mu := &api.Mutation{
+	mutation := &api.Mutation{
 		SetJson: tripJSON,
 	}
 
-	req := &api.Request{
+	request := &api.Request{
 		Query:     query,
-		Mutations: []*api.Mutation{mu},
+		Mutations: []*api.Mutation{mutation},
 		CommitNow: true,
 	}
 
-	_, err = txn.Do(ctx, req)
+	_, err = transaction.Do(ctx, request)
 	if err != nil {
-		return fmt.Errorf("txn.Do: %w", err)
+		return fmt.Errorf("transaction.Do: %w", err)
 	}
 
 	return nil
@@ -129,12 +129,12 @@ func (r *Repository) GetCityStations(ctx context.Context, cityName string) ([]mo
 		}
 	}`
 
-	txn := r.dg.Client.NewTxn()
-	defer txn.Discard(ctx)
+	transaction := r.dg.Client.NewTxn()
+	defer transaction.Discard(ctx)
 
-	resp, err := txn.QueryWithVars(ctx, query, map[string]string{"$name": cityName})
+	response, err := transaction.QueryWithVars(ctx, query, map[string]string{"$name": cityName})
 	if err != nil {
-		return nil, fmt.Errorf("txn.QueryWithVars (City: %s): %w", cityName, err)
+		return nil, fmt.Errorf("transaction.QueryWithVars (City: %s): %w", cityName, err)
 	}
 
 	var decode struct {
@@ -143,7 +143,7 @@ func (r *Repository) GetCityStations(ctx context.Context, cityName string) ([]mo
 		} `json:"city"`
 	}
 
-	if err := json.Unmarshal(resp.Json, &decode); err != nil {
+	if err := json.Unmarshal(response.Json, &decode); err != nil {
 		return nil, fmt.Errorf("json.Unmarshal: %w", err)
 	}
 
@@ -177,12 +177,12 @@ func (r *Repository) GetStationDepartures(ctx context.Context, stationID string)
 		}
 	}`, stationID)
 
-	txn := r.dg.Client.NewTxn()
-	defer txn.Discard(ctx)
+	transaction := r.dg.Client.NewTxn()
+	defer transaction.Discard(ctx)
 
-	resp, err := txn.Query(ctx, query)
+	response, err := transaction.Query(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("txn.Query: %w", err)
+		return nil, fmt.Errorf("transaction.Query: %w", err)
 	}
 
 	var decode struct {
@@ -191,7 +191,7 @@ func (r *Repository) GetStationDepartures(ctx context.Context, stationID string)
 		} `json:"station"`
 	}
 
-	if err := json.Unmarshal(resp.Json, &decode); err != nil {
+	if err := json.Unmarshal(response.Json, &decode); err != nil {
 		return nil, fmt.Errorf("json.Unmarshal: %w", err)
 	}
 
@@ -216,14 +216,14 @@ func (r *Repository) GetStationDepartures(ctx context.Context, stationID string)
 func (r *Repository) GetNodeByID(ctx context.Context, uid string) ([]byte, error) {
 	query := fmt.Sprintf(`{ node(func: uid(%s)) { uid dgraph.type expand(_all_) } }`, uid)
 
-	txn := r.dg.Client.NewTxn()
-	defer txn.Discard(ctx)
+	transaction := r.dg.Client.NewTxn()
+	defer transaction.Discard(ctx)
 
-	resp, err := txn.Query(ctx, query)
+	response, err := transaction.Query(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("txn.Query (UID: %s): %w", uid, err)
+		return nil, fmt.Errorf("transaction.Query (UID: %s): %w", uid, err)
 	}
-	return resp.Json, nil
+	return response.Json, nil
 }
 
 func (r *Repository) HasConnection(ctx context.Context, fromUID, toUID string) (bool, error) {
@@ -233,12 +233,12 @@ func (r *Repository) HasConnection(ctx context.Context, fromUID, toUID string) (
 		}
 	}`, fromUID, toUID)
 
-	txn := r.dg.Client.NewTxn()
-	defer txn.Discard(ctx)
+	transaction := r.dg.Client.NewTxn()
+	defer transaction.Discard(ctx)
 
-	resp, err := txn.Query(ctx, query)
+	response, err := transaction.Query(ctx, query)
 	if err != nil {
-		return false, fmt.Errorf("txn.Query: %w", err)
+		return false, fmt.Errorf("transaction.Query: %w", err)
 	}
 
 	var decode struct {
@@ -247,7 +247,7 @@ func (r *Repository) HasConnection(ctx context.Context, fromUID, toUID string) (
 		} `json:"check"`
 	}
 
-	if err := json.Unmarshal(resp.Json, &decode); err != nil {
+	if err := json.Unmarshal(response.Json, &decode); err != nil {
 		return false, fmt.Errorf("json.Unmarshal: %w", err)
 	}
 
@@ -273,15 +273,15 @@ func (r *Repository) HasCityConnection(ctx context.Context, fromCity, toCity str
 		}
 	}`
 
-	txn := r.dg.Client.NewTxn()
-	defer txn.Discard(ctx)
+	transaction := r.dg.Client.NewTxn()
+	defer transaction.Discard(ctx)
 
-	resp, err := txn.QueryWithVars(ctx, query, map[string]string{
+	response, err := transaction.QueryWithVars(ctx, query, map[string]string{
 		"$from": fromCity,
 		"$to":   toCity,
 	})
 	if err != nil {
-		return false, fmt.Errorf("txn.QueryWithVars: %w", err)
+		return false, fmt.Errorf("transaction.QueryWithVars: %w", err)
 	}
 
 	var decode struct {
@@ -290,7 +290,7 @@ func (r *Repository) HasCityConnection(ctx context.Context, fromCity, toCity str
 		} `json:"trips"`
 	}
 
-	if err := json.Unmarshal(resp.Json, &decode); err != nil {
+	if err := json.Unmarshal(response.Json, &decode); err != nil {
 		return false, fmt.Errorf("json.Unmarshal: %w", err)
 	}
 
@@ -299,4 +299,56 @@ func (r *Repository) HasCityConnection(ctx context.Context, fromCity, toCity str
 	}
 
 	return false, nil
+}
+
+func (r *Repository) SaveCity(ctx context.Context, city *models.City) error {
+	query := fmt.Sprintf(`{
+		v as var(func: eq(city.name, "%s"))
+	}`, city.Name)
+
+	stationsDTO := make([]StationDTO, 0, len(city.Stations))
+	for _, station := range city.Stations {
+		stationsDTO = append(stationsDTO, StationDTO{
+			Uid:           fmt.Sprintf("_:station_%s", station.Name),
+			Name:          station.Name,
+			TransportType: station.TransportType,
+			Type:          []string{"Station"},
+		})
+	}
+
+	cityDTO := &CityDTO{
+		Uid:  "uid(v)",
+		Name: city.Name,
+		Type: []string{"City"},
+		Location: GeoJSON{
+			Type:        "Point",
+			Coordinates: []float64{city.Longitude, city.Latitude},
+		},
+		Stations: stationsDTO,
+	}
+
+	transaction := r.dg.Client.NewTxn()
+	defer transaction.Discard(ctx)
+
+	cityJSON, err := json.Marshal(cityDTO)
+	if err != nil {
+		return fmt.Errorf("marshal city (name: %s): %w", city.Name, err)
+	}
+
+	mutation := &api.Mutation{
+		SetJson: cityJSON,
+	}
+
+	request := &api.Request{
+		Query:     query,
+		Mutations: []*api.Mutation{mutation},
+		CommitNow: true,
+	}
+
+	_, err = transaction.Do(ctx, request)
+	if err != nil {
+		return fmt.Errorf("transaction.Do (city: %s): %w", city.Name, err)
+	}
+
+	return nil
 }

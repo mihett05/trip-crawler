@@ -7,7 +7,7 @@ type RoutePoint struct {
 	StartTimestamp int64    `json:"start_timestamp"`
 	EndTimestamp   int64    `json:"end_timestamp"`
 	Details        string   `json:"details"`
-	Price          float64  `json:"price,omitempty"` // ← добавить
+	Price          float64  `json:"price,omitempty"`
 	Latitude       *float64 `json:"latitude,omitempty"`
 	Longitude      *float64 `json:"longitude,omitempty"`
 }

@@ -3,9 +3,11 @@ package models
 import "time"
 
 type City struct {
-	ID       string
-	Name     string
-	Stations []*Station
+	ID        string
+	Name      string
+	Latitude  float64
+	Longitude float64
+	Stations  []*Station
 }
 
 type Station struct {
