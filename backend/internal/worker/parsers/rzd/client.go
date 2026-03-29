@@ -61,6 +61,8 @@ func (c *Client) do(req *http.Request, dest interface{}) error {
 
 // ParseTrains получает список поездов между двумя станциями на указанную дату
 func (c *Client) ParseTrains(origin, destination string, departureDate time.Time) (*TrainResponse, error) {
+	fmt.Printf("[rzd] ParseTrains: origin=%s destination=%s date=%s\n", origin, destination, departureDate.Format("2006-01-02"))
+
 	if len(origin) != 7 || len(destination) != 7 {
 		return nil, fmt.Errorf("коды станций должны состоять ровно из 7 символов")
 	}
@@ -90,11 +92,13 @@ func (c *Client) ParseTrains(origin, destination string, departureDate time.Time
 		return nil, err
 	}
 
+	fmt.Printf("[rzd] ParseTrains: got %d trains\n", len(result.Trains))
 	return &result, nil
 }
 
 // SuggestCity ищет станции/города по префиксу
 func (c *Client) SuggestCity(prefix string) (*SuggestResponse, error) {
+	fmt.Printf("[rzd] SuggestCity: prefix=%s\n", prefix)
 	req, err := http.NewRequest(http.MethodGet, baseURLSuggest, nil)
 	if err != nil {
 		return nil, err
@@ -114,5 +118,6 @@ func (c *Client) SuggestCity(prefix string) (*SuggestResponse, error) {
 		return nil, err
 	}
 
+	fmt.Printf("[rzd] SuggestCity: prefix=%s got %d city nodes, %d train nodes\n", prefix, len(result.City), len(result.Train))
 	return &result, nil
 }

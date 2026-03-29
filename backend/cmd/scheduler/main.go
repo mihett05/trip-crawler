@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
+	"fmt"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -34,7 +37,13 @@ func main() {
 		})
 	case "trips":
 		// TODO: сделать загрузку из репозитория
-		tasks := app.Scheduler.GenerateTicketTasks(time.Now(), []scheduler.Connection{})
+		rawTasks, err := LoadConnections("connections.json")
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("[scheduler] loaded", len(rawTasks), "rawTasks")
+		tasks := app.Scheduler.GenerateTicketTasks(time.Now(), rawTasks)
+		fmt.Println("[scheduler] loaded", len(tasks), "tasks")
 		for _, task := range tasks {
 			app.RoutesQueue.ScheduleTrip(ctx, messages.TripRequested{
 				DepartStation:        task.OriginCode,
@@ -49,4 +58,19 @@ func main() {
 	}
 
 	app.Shutdown()
+}
+
+func LoadConnections(filePath string) ([]scheduler.Connection, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("open file: %w", err)
+	}
+	defer f.Close()
+
+	var connections []scheduler.Connection
+	if err := json.NewDecoder(f).Decode(&connections); err != nil {
+		return nil, fmt.Errorf("decode json: %w", err)
+	}
+
+	return connections, nil
 }
