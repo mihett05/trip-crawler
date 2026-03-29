@@ -20,6 +20,7 @@ type Ticket struct {
 type TripRequested struct {
 	DepartStation        string `json:"depart"`
 	DepartStationID      string `json:"depart_station_id"`
+	DepartureAtTimestamp int64
 	DestinationStation   string `json:"destination"`
 	DestinationStationID string `json:"destination_station_id"`
 }

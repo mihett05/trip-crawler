@@ -6,18 +6,18 @@ import (
 	"fmt"
 	"time"
 
+	corenats "github.com/mihett05/trip-crawler/internal/service/core/nats"
 	"github.com/mihett05/trip-crawler/pkg/messages"
-	natsutils "github.com/mihett05/trip-crawler/pkg/messages/nats-utils"
 	"github.com/nats-io/nats.go"
 )
 
 type Gateway struct {
-	js natsutils.JetStream
+	nats *corenats.Client
 }
 
-func New(js natsutils.JetStream) *Gateway {
+func New(nats *corenats.Client) *Gateway {
 	return &Gateway{
-		js: js,
+		nats: nats,
 	}
 }
 
@@ -33,7 +33,7 @@ func (r *Gateway) ScheduleTrip(ctx context.Context, request messages.TripRequest
 
 	msg.Data = body
 
-	_, err = r.js.PublishMsg(ctx, msg)
+	_, err = r.nats.Connection.JetStream.PublishMsg(ctx, msg)
 	if err != nil {
 		return fmt.Errorf("js.PublishMsg: %w", err)
 	}

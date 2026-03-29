@@ -4,12 +4,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mihett05/trip-crawler/pkg/application/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func defaultConfig() Config {
-	return Config{
+func defaultConfig() config.SchedulerConfig {
+	return config.SchedulerConfig{
 		TopNCities:     100,
 		DaysAhead:      90,
 		BucketSizeMin:  5,
@@ -33,16 +34,16 @@ func neverParsedConn(originCode, destCode string, originPop, destPop int) Connec
 // --- GenerateStationTask ---
 
 func TestGenerateStationTask_TopN(t *testing.T) {
-	s := New(Config{TopNCities: 42, DaysAhead: 90, BucketSizeMin: 5, BucketSizeMax: 10,
+	s := New(config.SchedulerConfig{TopNCities: 42, DaysAhead: 90, BucketSizeMin: 5, BucketSizeMax: 10,
 		BucketPauseMin: 15 * time.Second, BucketPauseMax: 30 * time.Second})
-	task := s.GenerateStationTask(time.Now())
+	task := s.GenerateCititesTask(time.Now())
 	assert.Equal(t, 42, task.TopN)
 }
 
 func TestGenerateStationTask_ScheduledAt(t *testing.T) {
 	now := time.Now()
 	s := New(defaultConfig())
-	task := s.GenerateStationTask(now)
+	task := s.GenerateCititesTask(now)
 	want := truncateToDay(now)
 	assert.True(t, task.ScheduledAt.Equal(want), "ScheduledAt = %v, want %v", task.ScheduledAt, want)
 }

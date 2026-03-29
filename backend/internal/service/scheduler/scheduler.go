@@ -4,6 +4,8 @@ import (
 	"math/rand/v2"
 	"sort"
 	"time"
+
+	"github.com/mihett05/trip-crawler/pkg/application/config"
 )
 
 // Scheduler is a pure task generator. It has no I/O dependencies — it only
@@ -15,16 +17,16 @@ import (
 //	tasks := s.GenerateTicketTasks(time.Now(), connections)
 //	repo.SaveTasks(ctx, tasks)
 type Scheduler struct {
-	cfg Config
+	cfg config.SchedulerConfig
 }
 
-func New(cfg Config) *Scheduler {
+func New(cfg config.SchedulerConfig) *Scheduler {
 	return &Scheduler{cfg: cfg}
 }
 
-// GenerateStationTask returns the daily task that triggers a full city/station
+// GenerateCititesTask returns the daily task that triggers a full city/station
 // graph refresh. Always returns exactly one task scheduled for the start of today.
-func (s *Scheduler) GenerateStationTask(today time.Time) StationLoadTask {
+func (s *Scheduler) GenerateCititesTask(today time.Time) StationLoadTask {
 	return StationLoadTask{
 		ScheduledAt: truncateToDay(today),
 		TopN:        s.cfg.TopNCities,

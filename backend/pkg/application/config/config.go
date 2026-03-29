@@ -13,6 +13,7 @@ type Config struct {
 	Observability    ObservabilityConfig `envPrefix:"OBSERVABILITY_"`
 	DGraphConnection string              `env:"DGRAPH_CONNECTION"`
 	NatsURL          string              `env:"NATS_URL"`
+	Scheduler        SchedulerConfig     `envPrefix:"SCHEDULER_"`
 }
 
 func New(filename string) (Config, error) {
