@@ -32,3 +32,5 @@ go.work.sum
 # .vscode/
 
 .DS_STORE
+
+wiki_page.html

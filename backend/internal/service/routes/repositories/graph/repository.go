@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/dgraph-io/dgo/v250/protos/api"
 	"github.com/mihett05/trip-crawler/internal/service/core/dgraph"
@@ -80,20 +79,17 @@ func (r *Repository) InitSchema(ctx context.Context) error {
 }
 
 func (r *Repository) SaveTrip(ctx context.Context, trip *models.Trip) error {
-	departureStr := trip.DepartureAt.Format(time.RFC3339)
-
 	destExternalID := ""
 	if trip.Destination != nil {
 		destExternalID = trip.Destination.ID
 	}
 
 	query := fmt.Sprintf(`{
-    t_v as var(func: eq(trip.external_id, "%s")) @filter(eq(trip.departure_at, "%s"))
     dest_v as var(func: eq(station.external_id, "%s"))
-  }`, trip.ExternalID, departureStr, destExternalID)
+  }`, destExternalID)
 
 	tripDTO := &TripDTO{
-		Uid:           "uid(t_v)",
+		Uid:           "_:new_trip",
 		ExternalID:    trip.ExternalID,
 		DepartureAt:   trip.DepartureAt,
 		ArrivalAt:     trip.ArrivalAt,
