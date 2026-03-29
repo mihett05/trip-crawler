@@ -69,3 +69,23 @@ func (s *Service) GetParsingTasks(ctx context.Context) ([]RouteTask, error) {
 
 	return tasks, nil
 }
+
+func (s *Service) GetParsingCombinations(ctx context.Context) ([]RouteTask, error) {
+	stations, err := s.repository.GetAllStations(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("repository.GetAllStations: %w", err)
+	}
+
+	var tasks []RouteTask
+
+	for _, fromStation := range stations {
+		for _, toStation := range stations {
+			tasks = append(tasks, RouteTask{
+				From: fromStation,
+				To:   toStation,
+			})
+		}
+	}
+
+	return tasks, nil
+}

@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/mihett05/trip-crawler/pkg/messages"
@@ -10,7 +11,19 @@ import (
 
 const rzdDateTimeLayout = "2006-01-02T15:04:05"
 
-func (h *Handler) HandleTripRequested(ctx context.Context, request messages.TripRequested) error {
+var (
+	counter     atomic.Int64
+	zeroCounter atomic.Int64
+	errCounter  atomic.Int64
+)
+
+func (h *Handler) HandleTripRequested(ctx context.Context, request messages.TripRequested) (err error) {
+	defer func() {
+		if err != nil {
+			errCounter.Add(1)
+		}
+	}()
+
 	fmt.Printf("[trips] received request: %s (%s) -> %s (%s) at %d\n",
 		request.DepartStation, request.DepartStationID,
 		request.DestinationStation, request.DestinationStationID,
@@ -32,7 +45,12 @@ func (h *Handler) HandleTripRequested(ctx context.Context, request messages.Trip
 	if err != nil {
 		return fmt.Errorf("rzd.ParseTrains: %w", err)
 	}
-	fmt.Printf("[trips] rzd: got %d trains\n", len(resp.Trains))
+	if len(resp.Trains) == 0 {
+		zeroCounter.Add(1)
+	} else {
+		counter.Add(1)
+	}
+	fmt.Printf("[trips] rzd: got %d trains - success %d | zero %d | err %d\n", len(resp.Trains), counter.Load(), zeroCounter.Load(), errCounter.Load())
 
 	for _, train := range resp.Trains {
 		fmt.Printf("[trips] processing train %s (%s -> %s, depart=%s)\n",
