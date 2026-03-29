@@ -147,12 +147,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    ports:
+      - "8889:8889"
     restart: unless-stopped
-    volumes:
-      - frontend-assets:/usr/share/nginx/html
     networks:
       - app-network
-    command: sleep infinity
 
   # Backend Service (HTTP Server)
   backend-service:
@@ -206,7 +205,6 @@ services:
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
-      - frontend-assets:/usr/share/nginx/html:ro
       - caddy_data:/data
       - caddy_config:/config
     restart: unless-stopped
@@ -225,7 +223,6 @@ volumes:
   dgraph-alpha-data:
   caddy_data:
   caddy_config:
-  frontend-assets:
 
 networks:
   app-network:

@@ -4,8 +4,6 @@ letsgotrip.store {
     }
 
     handle {
-        root * /usr/share/nginx/html
-        file_server
-        try_files {path} {path}/ /index.html
+        reverse_proxy frontend:8889
     }
 }
