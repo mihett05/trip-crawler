@@ -24,8 +24,10 @@ export type ResponseConfig<TData = unknown> = {
   headers?: AxiosResponse['headers'];
 };
 
+const baseUrl = import.meta.env.PROD ? '' : 'http://localhost:8888';
+
 export const axiosInstance = axios.create({
-  baseURL: 'http://localhost:8888',
+  baseURL: baseUrl,
 });
 
 export type Client = <TData, _TError = unknown, TVariables = unknown>(

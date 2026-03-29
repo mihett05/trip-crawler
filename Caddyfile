@@ -1,5 +1,5 @@
 letsgotrip.store {
-    handle /api/* {
+    handle_path /api/* {
         reverse_proxy backend-service:8888
     }
 
