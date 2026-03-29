@@ -17,5 +17,6 @@ export type {
   GetCitiesQueryResponse,
 } from './GetCities.ts';
 export type { GetCitiesResponse } from './GetCitiesResponse.ts';
-export type { RoutePoint } from './RoutePoint.ts';
+export type { RoutePoint, RoutePointTransportTypeEnumKey } from './RoutePoint.ts';
 export { errorCodeEnum } from './Error.ts';
+export { routePointTransportTypeEnum } from './RoutePoint.ts';

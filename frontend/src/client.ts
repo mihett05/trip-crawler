@@ -1,9 +1,6 @@
 import axios from 'axios';
 
-import type { AxiosError, AxiosHeaders, AxiosRequestConfig, AxiosResponse } from 'axios';
-
-declare const AXIOS_BASE: string;
-declare const AXIOS_HEADERS: string;
+import type { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
 
 /**
  * Subset of AxiosRequestConfig

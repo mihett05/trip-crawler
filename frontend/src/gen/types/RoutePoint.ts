@@ -5,6 +5,15 @@
 
 import type { Coordinates } from './Coordinates.ts';
 
+export const routePointTransportTypeEnum = {
+  train: 'train',
+  bus: 'bus',
+  airplane: 'airplane',
+} as const;
+
+export type RoutePointTransportTypeEnumKey =
+  (typeof routePointTransportTypeEnum)[keyof typeof routePointTransportTypeEnum];
+
 export type RoutePoint = {
   /**
    * @description Name of the route point/destination
@@ -30,4 +39,19 @@ export type RoutePoint = {
    * @type string
    */
   details?: string | null;
+  /**
+   * @description Price for this route segment
+   * @type number, double
+   */
+  price: number;
+  /**
+   * @description Type of transport for provided route segment
+   * @type string
+   */
+  transportType: RoutePointTransportTypeEnumKey;
+  /**
+   * @description Amount of available tickets for route segment
+   * @type integer, int64
+   */
+  availableAmount: number;
 };

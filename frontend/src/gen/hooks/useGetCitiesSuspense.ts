@@ -30,6 +30,7 @@ export function getCitiesSuspenseQueryOptions(
   >({
     queryKey,
     queryFn: async ({ signal }) => {
+      //@ts-ignore
       return getCities({ ...config, signal: config.signal ?? signal });
     },
   });

@@ -36,6 +36,27 @@ func (e ErrorCode) Valid() bool {
 	}
 }
 
+// Defines values for RoutePointTransportType.
+const (
+	Airplane RoutePointTransportType = "airplane"
+	Bus      RoutePointTransportType = "bus"
+	Train    RoutePointTransportType = "train"
+)
+
+// Valid indicates whether the value is a known member of the RoutePointTransportType enum.
+func (e RoutePointTransportType) Valid() bool {
+	switch e {
+	case Airplane:
+		return true
+	case Bus:
+		return true
+	case Train:
+		return true
+	default:
+		return false
+	}
+}
+
 // Coordinates defines model for Coordinates.
 type Coordinates struct {
 	Latitude  float64 `json:"latitude"`
@@ -82,7 +103,9 @@ type GetCitiesResponse struct {
 
 // RoutePoint defines model for RoutePoint.
 type RoutePoint struct {
-	Coordinates *Coordinates `json:"coordinates,omitempty"`
+	// AvailableAmount Amount of available tickets for route segment
+	AvailableAmount int64        `json:"availableAmount"`
+	Coordinates     *Coordinates `json:"coordinates,omitempty"`
 
 	// Details Additional details about this route point
 	Details *string `json:"details,omitempty"`
@@ -93,9 +116,18 @@ type RoutePoint struct {
 	// Name Name of the route point/destination
 	Name string `json:"name"`
 
+	// Price Price for this route segment
+	Price float64 `json:"price"`
+
 	// StartTimestamp Unix timestamp for the start of this point in the route
 	StartTimestamp int64 `json:"startTimestamp"`
+
+	// TransportType Type of transport for provided route segment
+	TransportType RoutePointTransportType `json:"transportType"`
 }
+
+// RoutePointTransportType Type of transport for provided route segment
+type RoutePointTransportType string
 
 // CreateRouteJSONRequestBody defines body for CreateRoute for application/json ContentType.
 type CreateRouteJSONRequestBody = CreateRouteRequest
@@ -289,27 +321,29 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"H4sIAAAAAAAC/8xX3W7bOBN9FYLfd7ELKPFP0yTQXZp0uwaSNHDTBYLCKGhpbE9XIlVy5MQI/O4Lkvq1",
+	"5MTtLhZ7Z4sjzpkzM2dGzzxSaaYkSDI8fOYmWkEq3M9LpXSMUhC4v5lWGWhC/y8RhJTHYH8vlE4F8ZDH",
+	"Kp8nwANOmwx4yGWezkHzbcATJZeH228DruF7jhpiHn5pvBzUfmfVW2r+DSKyXi41CIKpygmm8D0HQ13g",
+	"ca4FoZI34ulKbPwjMJHGzD7lIb8RT5jmKSsNmVowWgEjjRlDyWKxMewX5cxF8isPODyJNEuAh6OTgKco",
+	"7es8HAVc5kkibIQh6RwqwCgJlp6XCg3KPWj8dS+iaUI4ayPoeswUFqluO7pGQ/byGAzZpFtf3pYtlHY+",
+	"tSW26ewLn6rUPrkTGi2MayVjJW1ukCB1XgoEhjTKpQWQopz4wxqf0Fps7KEhoelKEHQBfrJHLBYEFaCS",
+	"hIeHh4ejm5ujqytW1FYDJB8PxydHw9HR6C0PGrUnqFF5JbydyivIauLq5uzVSjSZkqYnoimYPHGkO2YN",
+	"yxIhpcUR7BRtnbSK1/9rWPCQ/29Q9++gaN6B83tn37FY2hz3R9gXw3utle42UKTinlicMXNnAQdpy+8L",
+	"n9z+cXE9ufo6ub37fM8DPrm9fz+9vbj++n46/ThtOG1UBxgjlj0OfsuThIHzUtq8lr0CTWneF+MHoEu0",
+	"ke3PUtkYkbOram+FkvpS5c0Ovuaf6amfTXGjUDp5FmuBTr0uUpV7g3ZE/rmNqTJlhNGfUEiGC40ZWKYg",
+	"Wx05Gjb6ECWdnvA+pYra8+elgm+OKquqQAKTniRcxDF63WaFDRNzlROjFZoCsKOrJSC/oyGlMRIJM2j7",
+	"lBRbo0Gy2lNka4/U1ykCGd9jCoZEmnWBfZb4xKg8r6oDZOwFH43HZT32ls3obPj2dDw+GR7GrRRpT6nf",
+	"ihTKAdMgY9CYCS1iitg7sWYao57r7+zjIraK7t76aEWxf6twqvzjrLrXfoDX8dnp+YG8khbSZErTvTva",
+	"BWSfOselmcOUabXGGOIuI4WOkhZomZ/nVhAEajsonKDVuShtXpZEl/cOcTvVWSZwN5ygowldTbEOUS5U",
+	"T+/dTVy0kR2NKJeWhDUk5eybb5jJIMLFxp55zQrcuDcBEzKuNiC7BGIEhVb7QuY84LlOeMhXRFk4GCQq",
+	"EslKGQrPz8/PXWaQHE/3dme41OIxAc0u7iY84GvQxmMcHQ+Ph9ZaZSBFhjzkb46Hx28sJYJWTlEG69Gg",
+	"Fvkl9CjjB6BKE6lQfO4u9SFMYm90WZ7oYvq4K8fDoZ+zksDrrsiyBCP36uCbsS6e68zXI6czOm6UidQj",
+	"n9lWcUr5mo52x6FLaP8kq1W/ALAN+NuDsB8Gxu8fPQAmkkBbDTeg16D9VuBK3eRpKvSmSEFFPImlo+cT",
+	"ORyGz6yxTaQvPr9imZ5M+j3OMMEkPLYqlj0irYqSRYjLXblZqSwTWqRAoLvZbyyI3LcoGHqn4s2Ppb7z",
+	"NWM/QTofFWf12v/CetHYvZs788HF0/P1tW3rjx2N279b7VUkz/Wc51etaW5DtCq/2VW21pgspKPgY3eW",
+	"1MK/DfZ7cizudXU6Hp+NG65Kzvt8eVTb2c/Rvb9bnYEXXYiZyaMIjFnkSeK+t07+jX59J2JWVDg7YijX",
+	"IsGYocxyarbIf0k+PLk9bd9Qk6nXjplz4e8qy7Ill3YUsRjWkKjMDvbC72sja1Z52r3xY6kkhmlIXF5J",
+	"Farkp6uSTohSIcUSimWiKneHejvb/hUAAP//kDXOjvsRAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

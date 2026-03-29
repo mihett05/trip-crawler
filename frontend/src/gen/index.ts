@@ -20,7 +20,7 @@ export type {
   GetCitiesQueryResponse,
 } from './types/GetCities.ts';
 export type { GetCitiesResponse } from './types/GetCitiesResponse.ts';
-export type { RoutePoint } from './types/RoutePoint.ts';
+export type { RoutePoint, RoutePointTransportTypeEnumKey } from './types/RoutePoint.ts';
 export { createRoute } from './clients/createRoute.ts';
 export { getCities } from './clients/getCities.ts';
 export { createRouteMutationKey } from './hooks/useCreateRoute.ts';
@@ -33,3 +33,4 @@ export { getCitiesSuspenseQueryKey } from './hooks/useGetCitiesSuspense.ts';
 export { getCitiesSuspenseQueryOptions } from './hooks/useGetCitiesSuspense.ts';
 export { useGetCitiesSuspense } from './hooks/useGetCitiesSuspense.ts';
 export { errorCodeEnum } from './types/Error.ts';
+export { routePointTransportTypeEnum } from './types/RoutePoint.ts';

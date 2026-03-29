@@ -28,6 +28,7 @@ export function getCitiesQueryOptions(config: Partial<RequestConfig> & { client?
   >({
     queryKey,
     queryFn: async ({ signal }) => {
+      //@ts-ignore
       return getCities({ ...config, signal: config.signal ?? signal });
     },
   });
@@ -69,6 +70,7 @@ export function useGetCities<
     queryClient,
   ) as UseQueryResult<TData, ResponseErrorConfig<GetCities500>> & { queryKey: TQueryKey };
 
+  //@ts-ignore
   query.queryKey = queryKey as TQueryKey;
 
   return query;

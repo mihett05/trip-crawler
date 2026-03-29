@@ -1,0 +1,232 @@
+services:
+  # Victoria Metrics Stack
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.136.0
+    ports:
+      - "8428:8428"
+    volumes:
+      - vmdata:/storage
+    command:
+      - "--storageDataPath=/storage"
+      - "--httpListenAddr=:8428"
+      - "--envflag.enable=true"
+      - "--envflag.prefix=VM_"
+      - "--loggerLevel=INFO"
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  victorialogs:
+    image: victoriametrics/victoria-logs:v1.47.0
+    ports:
+      - "9428:9428"
+    volumes:
+      - vldata:/storage
+    command:
+      - "--storageDataPath=/storage"
+      - "--httpListenAddr=:9428"
+      - "--envflag.enable=true"
+      - "--envflag.prefix=VM_"
+      - "--loggerLevel=INFO"
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  victoriatraces:
+    image: victoriametrics/victoria-traces:v0.8.0
+    ports:
+      - "10428:10428"
+    volumes:
+      - vtdata:/storage
+    command:
+      - "--storageDataPath=/storage"
+      - "--httpListenAddr=:10428"
+      - "--envflag.enable=true"
+      - "--envflag.prefix=VM_"
+      - "--loggerLevel=INFO"
+    restart: unless-stopped
+    depends_on:
+      - victoriametrics
+    networks:
+      - app-network
+
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector:0.146.1
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ./backend/otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    command:
+      - "--config=/etc/otelcol/config.yaml"
+    restart: unless-stopped
+    depends_on:
+      - victoriametrics
+      - victorialogs
+      - victoriatraces
+    networks:
+      - app-network
+
+  # NATS Message Broker
+  nats:
+    image: nats:2.12.5-linux
+    command:
+      - "--name=nats-prod"
+      - "--jetstream"
+      - "--store_dir=/data"
+      - "--http_port=8222"
+      - "--port=4222"
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - nats-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "sh", "-c", "nats-server --health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app-network
+
+  # DGraph Database
+  dgraph-zero:
+    image: dgraph/dgraph:v25.3.0
+    command:
+      - dgraph
+      - zero
+      - --my=dgraph-zero:5080
+      - --raft=idx=1
+      - --bindall
+    ports:
+      - "5080:5080"
+      - "6080:6080"
+    volumes:
+      - dgraph-zero-data:/dgraph
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "http://127.0.0.1:6080/state"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  dgraph-alpha:
+    image: dgraph/dgraph:v25.3.0
+    depends_on:
+      dgraph-zero:
+        condition: service_healthy
+    command:
+      - dgraph
+      - alpha
+      - --my=dgraph-alpha:7080
+      - --zero=dgraph-zero:5080
+      - --bindall
+      - --security
+      - whitelist=0.0.0.0/0
+    ports:
+      - "7080:7080"
+      - "8080:8080"
+      - "9080:9080"
+    volumes:
+      - dgraph-alpha-data:/dgraph
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+    networks:
+      - app-network
+
+  # Frontend Application (provides static files volume)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - frontend-assets:/usr/share/nginx/html
+    networks:
+      - app-network
+    command: sleep infinity
+
+  # Backend Service (HTTP Server)
+  backend-service:
+    build:
+      context: ./backend
+      dockerfile: service.dockerfile
+    ports:
+      - "8888:8888"
+    environment:
+      - APP_NAME=trip-crawler-service
+      - APP_ENV=production
+      - HTTP_HOST=0.0.0.0
+      - HTTP_PORT=8888
+      - OBSERVABILITY_OTEL_EXPORTER=otel-collector:4317
+      - OBSERVABILITY_OTEL_INSECURE=true
+      - DGRAPH_CONNECTION=dgraph://dgraph-alpha:9080
+      - NATS_URL=nats://nats:4222
+    restart: unless-stopped
+    depends_on:
+      - nats
+      - dgraph-alpha
+      - otel-collector
+    networks:
+      - app-network
+
+  # Backend Worker (NATS Consumer)
+  backend-worker:
+    build:
+      context: ./backend
+      dockerfile: worker.dockerfile
+    environment:
+      - APP_NAME=trip-crawler-worker
+      - APP_ENV=production
+      - OBSERVABILITY_OTEL_EXPORTER=otel-collector:4317
+      - OBSERVABILITY_OTEL_INSECURE=true
+      - DGRAPH_CONNECTION=dgraph-alpha:9080
+      - NATS_URL=nats://nats:4222
+    restart: unless-stopped
+    depends_on:
+      - nats
+      - dgraph-alpha
+      - otel-collector
+    networks:
+      - app-network
+
+  # Caddy Reverse Proxy
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - frontend-assets:/usr/share/nginx/html:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    depends_on:
+      - frontend
+      - backend-service
+    networks:
+      - app-network
+
+volumes:
+  vmdata:
+  vldata:
+  vtdata:
+  nats-data:
+  dgraph-zero-data:
+  dgraph-alpha-data:
+  caddy_data:
+  caddy_config:
+  frontend-assets:
+
+networks:
+  app-network:
+    driver: bridge

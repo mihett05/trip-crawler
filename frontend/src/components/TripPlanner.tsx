@@ -26,6 +26,7 @@ import { Autocomplete } from '@mui/material';
 import { SwapHoriz as SwapIcon } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import type { TripDetails } from '../services/api';
 import {
   fetchCitySuggestions,
   convertFormDataToApiRequest,
@@ -34,31 +35,13 @@ import {
 import TripResults from './TripResults';
 import { useCreateRoute } from '../gen';
 
-interface TripSegment {
-  id: number;
-  city: string;
-  coordinates: [number, number]; // [latitude, longitude]
-  arrivalDate: string; // ISO date string
-  departureDate: string; // ISO date string
-  duration: number; // number of days
-}
-
-interface TripDetails {
-  id: number;
-  route: TripSegment[];
-  totalDistance: number; // in kilometers
-  totalDays: number;
-  origin: string;
-  destination: string;
-  stops: string[];
-}
-
 interface TripFormData {
   departureCity: string;
   middleCities: string[];
   destinationCity: string;
   startDate: Date | null;
-  tripDuration: number;
+  minDays: number;
+  maxDays: number;
 }
 
 const TripPlanner: React.FC = () => {
@@ -68,7 +51,8 @@ const TripPlanner: React.FC = () => {
     middleCities: [],
     destinationCity: '',
     startDate: null,
-    tripDuration: 7,
+    minDays: 7,
+    maxDays: 14,
   });
 
   const [currentMiddleCity, setCurrentMiddleCity] = useState('');
@@ -157,8 +141,16 @@ const TripPlanner: React.FC = () => {
       newErrors.startDate = t('startDateRequired');
     }
 
-    if (formData.tripDuration <= 0) {
-      newErrors.tripDuration = t('tripDurationMin');
+    if (formData.minDays <= 0) {
+      newErrors.minDays = 'Minimum days must be at least 1';
+    }
+
+    if (formData.maxDays <= 0) {
+      newErrors.maxDays = 'Maximum days must be at least 1';
+    }
+
+    if (formData.minDays > formData.maxDays) {
+      newErrors.maxDays = t('minMaxError');
     }
 
     setErrors(newErrors);
@@ -438,53 +430,55 @@ const TripPlanner: React.FC = () => {
 
               <Divider sx={{ my: 3 }} />
 
-              {/* Dates and Duration */}
+              {/* Date Selection */}
+              <Box sx={{ mb: 2 }}>
+                <DatePicker
+                  label={t('departureDate')}
+                  value={formData.startDate}
+                  onChange={(newValue) => handleInputChange('startDate', newValue)}
+                  minDate={new Date()}
+                  slotProps={{
+                    textField: {
+                      error: !!errors.startDate,
+                      helperText: errors.startDate || '',
+                      fullWidth: true,
+                    },
+                    actionBar: {
+                      actions: ['today', 'accept'],
+                    },
+                  }}
+                  sx={{
+                    width: '100%',
+                    '& .MuiInputBase-input': {
+                      py: 1.2,
+                      px: 1.5,
+                    },
+                  }}
+                />
+              </Box>
+
+              {/* Min/Max Days */}
               <Box
                 sx={{
                   display: 'grid',
                   gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
                   gap: 2,
-                  mb: 2,
+                  mt: 2,
+                  pt: 2,
+                  borderTop: '1px solid',
+                  borderColor: 'divider',
                 }}
               >
                 <Box>
-                  <Box>
-                    <DatePicker
-                      label={t('departureDate')}
-                      value={formData.startDate}
-                      onChange={(newValue) => handleInputChange('startDate', newValue)}
-                      minDate={new Date()}
-                      slotProps={{
-                        textField: {
-                          error: !!errors.startDate,
-                          helperText: errors.startDate || '',
-                          fullWidth: true,
-                        },
-                        actionBar: {
-                          actions: ['today', 'accept'],
-                        },
-                      }}
-                      sx={{
-                        width: '100%',
-                        '& .MuiInputBase-input': {
-                          py: 1.2,
-                          px: 1.5,
-                        },
-                      }}
-                    />
-                  </Box>
-                </Box>
-
-                <Box>
-                  <FormControl fullWidth error={!!errors.tripDuration}>
-                    <InputLabel id="duration-select-label" sx={{ fontWeight: 600 }}>
-                      {t('tripLength')}
+                  <FormControl fullWidth>
+                    <InputLabel id="min-days-select-label" sx={{ fontWeight: 600 }}>
+                      {t('minDays')}
                     </InputLabel>
                     <Select
-                      labelId="duration-select-label"
-                      value={formData.tripDuration}
-                      label={t('tripLength')}
-                      onChange={(e) => handleInputChange('tripDuration', Number(e.target.value))}
+                      labelId="min-days-select-label"
+                      value={formData.minDays}
+                      label={t('minDays')}
+                      onChange={(e) => handleInputChange('minDays', Number(e.target.value))}
                       sx={{
                         py: 1.2,
                         px: 1.5,
@@ -495,11 +489,37 @@ const TripPlanner: React.FC = () => {
                     >
                       {[...Array(30)].map((_, i) => (
                         <MenuItem key={i + 1} value={i + 1}>
-                          {t('days', { count: i + 1, plural: i + 1 !== 1 ? '' : '' })}
+                          {t('days', { count: i + 1, plural: i + 1 !== 1 ? 's' : '' })}
                         </MenuItem>
                       ))}
                     </Select>
-                    {errors.tripDuration && <FormHelperText>{errors.tripDuration}</FormHelperText>}
+                  </FormControl>
+                </Box>
+
+                <Box>
+                  <FormControl fullWidth>
+                    <InputLabel id="max-days-select-label" sx={{ fontWeight: 600 }}>
+                      {t('maxDays')}
+                    </InputLabel>
+                    <Select
+                      labelId="max-days-select-label"
+                      value={formData.maxDays}
+                      label={t('maxDays')}
+                      onChange={(e) => handleInputChange('maxDays', Number(e.target.value))}
+                      sx={{
+                        py: 1.2,
+                        px: 1.5,
+                        '& .MuiTypography-root': {
+                          fontWeight: 500,
+                        },
+                      }}
+                    >
+                      {[...Array(60)].map((_, i) => (
+                        <MenuItem key={i + 1} value={i + 1}>
+                          {t('days', { count: i + 1, plural: i + 1 !== 1 ? 's' : '' })}
+                        </MenuItem>
+                      ))}
+                    </Select>
                   </FormControl>
                 </Box>
               </Box>

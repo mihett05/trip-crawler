@@ -8,9 +8,8 @@ import {
   TimelineContent,
   TimelineDot,
 } from '@mui/lab';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Icon } from 'leaflet';
 import { useTranslation } from 'react-i18next';
 
 // Fix for default marker icon in Leaflet with React
@@ -29,25 +28,9 @@ interface TripSegment {
   arrivalDate: string; // ISO date string
   departureDate: string; // ISO date string
   duration: number; // number of days
-}
-
-interface TripDetails {
-  id: number;
-  route: TripSegment[];
-  totalDistance: number; // in kilometers
-  totalDays: number;
-  origin: string;
-  destination: string;
-  stops: string[];
-}
-
-interface TripSegment {
-  id: number;
-  city: string;
-  coordinates: [number, number]; // [latitude, longitude]
-  arrivalDate: string; // ISO date string
-  departureDate: string; // ISO date string
-  duration: number; // number of days
+  price: number;
+  transportType: 'train' | 'bus' | 'airplane';
+  availableAmount: number;
 }
 
 interface TripDetails {
@@ -65,16 +48,12 @@ interface TripResultsProps {
   loading?: boolean;
 }
 
-// Create a custom icon to fix the marker issue in React
-const customIcon = new Icon({
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-});
-
 const TripResults: React.FC<TripResultsProps> = ({ tripData }) => {
   const { t } = useTranslation(); // Добавляем использование хука перевода
+
+  // Calculate total price of all segments
+  const totalPrice = tripData.route.reduce((sum, segment) => sum + segment.price, 0);
+
   // Find the center of the map based on the route
   const getMapCenter = (): [number, number] => {
     if (tripData.route.length === 0) return [51.505, -0.09]; // Default to London if no route
@@ -120,6 +99,9 @@ const TripResults: React.FC<TripResultsProps> = ({ tripData }) => {
                 days: tripData.totalDays,
                 distance: tripData.totalDistance.toLocaleString(),
               })}
+            </Typography>
+            <Typography variant="h6" sx={{ mt: 1, fontWeight: 600, color: 'warning.main' }}>
+              {t('price')}: {totalPrice.toLocaleString()} ₽
             </Typography>
           </Box>
           <Box
@@ -246,6 +228,19 @@ const TripResults: React.FC<TripResultsProps> = ({ tripData }) => {
                               })}
                             </strong>
                           </Typography>
+
+                          {/* Transport information */}
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                            <strong>{t('transportType')}:</strong> {t(segment.transportType)}
+                          </Typography>
+
+                          <Typography variant="body2" color="text.secondary">
+                            <strong>{t('availableTickets')}:</strong> {segment.availableAmount}
+                          </Typography>
+
+                          <Typography variant="body2" color="text.primary" sx={{ fontWeight: 600 }}>
+                            <strong>{t('price')}:</strong> {segment.price.toLocaleString()} ₽
+                          </Typography>
                         </Stack>
                       </Box>
 
@@ -282,6 +277,7 @@ const TripResults: React.FC<TripResultsProps> = ({ tripData }) => {
           borderColor: 'divider',
           overflow: 'hidden',
           boxShadow: 2,
+          mt: 3,
         }}
       >
         <Box
@@ -298,26 +294,16 @@ const TripResults: React.FC<TripResultsProps> = ({ tripData }) => {
           </Typography>
         </Box>
         <CardContent sx={{ height: 400, p: 0 }}>
-          <MapContainer center={getMapCenter()} zoom={5} style={{ height: '100%', width: '100%' }}>
+          <MapContainer
+            center={getMapCenter()}
+            zoom={5}
+            style={{ height: '100%', width: '100%' }}
+            attributionControl={false} // Disable the attribution control to hide "Leaflet" logo/text
+          >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-
-            {/* Render markers for each city in the route */}
-            {tripData.route.map((segment) => (
-              <Marker key={segment.id} position={segment.coordinates} icon={customIcon}>
-                <Popup>
-                  <div>
-                    <strong>{segment.city}</strong>
-                    <br />
-                    {t('arrive')}: {new Date(segment.arrivalDate).toLocaleDateString()}
-                    <br />
-                    {t('depart')}: {new Date(segment.departureDate).toLocaleDateString()}
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
           </MapContainer>
         </CardContent>
       </Paper>
