@@ -6,9 +6,9 @@ metadata:
   name: flux-system
   namespace: flux-system
 spec:
-  interval: 1m0s
+  interval: 15s
   ref:
-    branch: master
+    branch: flux
   secretRef:
     name: flux-system
   url: ssh://git@github.com/mihett05/trip-crawler.git
@@ -25,3 +25,4 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
+
