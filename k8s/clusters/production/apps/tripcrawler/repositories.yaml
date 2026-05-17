@@ -1,0 +1,10 @@
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: tripcrawler
+  namespace: tripcrawler
+spec:
+  type: oci
+  interval: 10m
+  url: oci://ghcr.io/mihett05/charts
+
