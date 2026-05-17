@@ -169,13 +169,11 @@ jobs:
           yq -i '.service.image.tag = "${{ github.sha }}"' ${{ env.CHART_PATH }}/values.yaml
           yq -i '.worker.image.tag = "${{ github.sha }}"' ${{ env.CHART_PATH }}/values.yaml
           yq -i '.frontend.image.tag = "${{ github.sha }}"' ${{ env.CHART_PATH }}/values.yaml
-          # If you also need the scheduler tag, uncomment:
           # yq -i '.scheduler.image.tag = "${{ github.sha }}"' ${{ env.CHART_PATH }}/values.yaml
 
       - name: Package Helm chart
         run: |
           helm package ${{ env.CHART_PATH }} \
-            --version ${{ github.sha }} \
             --app-version ${{ github.sha }} \
             --destination /tmp/helm-package
 
