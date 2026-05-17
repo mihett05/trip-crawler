@@ -10,36 +10,40 @@ import (
 )
 
 func ZapLogger(logger *zap.Logger) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		fn := func(w http.ResponseWriter, r *http.Request) {
-			writer := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
-			start := time.Now()
+    return func(next http.Handler) http.Handler {
+        fn := func(w http.ResponseWriter, r *http.Request) {
+            writer := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+            
+            // 1. Создаем буфер и подключаем Tee ДО выполнения запроса
+            var buffer bytes.Buffer
+            writer.Tee(&buffer)
 
-			defer func() {
-				requestLogger := logger.With(
-					zap.String("method", r.Method),
-					zap.Int("status", writer.Status()),
-					zap.String("path", r.URL.Path),
-					zap.String("request_id", middleware.GetReqID(r.Context())),
-					zap.Duration("latency", time.Since(start)),
-					zap.Int("response_size", writer.BytesWritten()),
-				)
-				if writer.Status() >= http.StatusInternalServerError {
-					var buffer bytes.Buffer
-					writer.Tee(&buffer)
+            start := time.Now()
 
-					requestLogger.Error(
-						"error",
-						zap.String("response", buffer.String()),
-					)
-				} else {
-					requestLogger.Info("request")
-				}
-			}()
+            defer func() {
+                requestLogger := logger.With(
+                    zap.String("method", r.Method),
+                    zap.Int("status", writer.Status()),
+                    zap.String("path", r.URL.Path),
+                    zap.String("request_id", middleware.GetReqID(r.Context())),
+                    zap.Duration("latency", time.Since(start)),
+                    zap.Int("response_size", writer.BytesWritten()),
+                )
+                
+                // 2. В defer мы теперь просто проверяем статус и забираем данные из уже заполненного буфера
+                if writer.Status() >= http.StatusInternalServerError {
+                    requestLogger.Error(
+                        "error",
+                        zap.String("response", buffer.String()),
+                    )
+                } else {
+                    requestLogger.Info("request")
+                }
+            }()
 
-			next.ServeHTTP(writer, r)
-		}
+            next.ServeHTTP(writer, r)
+        }
 
-		return http.HandlerFunc(fn)
-	}
+        return http.HandlerFunc(fn)
+    }
 }

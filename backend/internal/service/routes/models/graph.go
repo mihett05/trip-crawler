@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import ("time"
+
+		"github.com/mihett05/trip-crawler/pkg/messages"
+)
 
 type City struct {
 	ID        string
@@ -26,5 +29,6 @@ type Trip struct {
 	DepartureAt   time.Time
 	ArrivalAt     time.Time
 	TransportType string
+	Tickets       []messages.Ticket
 	Destination   *Station
 }

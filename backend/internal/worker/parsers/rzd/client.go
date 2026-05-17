@@ -61,7 +61,10 @@ func (c *Client) do(req *http.Request, dest interface{}) error {
 
 // ParseTrains получает список поездов между двумя станциями на указанную дату
 func (c *Client) ParseTrains(origin, destination string, departureDate time.Time) (*TrainResponse, error) {
-	fmt.Printf("[rzd] ParseTrains: origin=%s destination=%s date=%s\n", origin, destination, departureDate.Format("2006-01-02"))
+	fmt.Printf("[%s] [rzd] ParseTrains: origin=%s destination=%s date=%s\n", 
+        time.Now().Format("15:04:05"), // Добавили это
+        origin, destination, departureDate.Format("2006-01-02"),
+    )
 
 	if len(origin) != 7 || len(destination) != 7 {
 		return nil, fmt.Errorf("коды станций должны состоять ровно из 7 символов")
@@ -92,7 +95,10 @@ func (c *Client) ParseTrains(origin, destination string, departureDate time.Time
 		return nil, err
 	}
 
-	fmt.Printf("[rzd] ParseTrains: got %d trains\n", len(result.Trains))
+	fmt.Printf("[%s] [rzd] ParseTrains: got %d trains\n", 
+        time.Now().Format("15:04:05"),
+        len(result.Trains),
+    )
 	return &result, nil
 }
 

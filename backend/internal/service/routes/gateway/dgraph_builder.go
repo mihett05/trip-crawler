@@ -79,21 +79,27 @@ func (b *DgraphItineraryBuilder) generatePaths(
 	}
 
 	if idx == len(points)-1 {
-		if currentTime.After(minFinish) && currentTime.Before(maxFinish.Add(minStayDuration)) {
-			pathCopy := make([]models.RoutePoint, len(currentPath))
-			copy(pathCopy, currentPath)
+        if currentTime.After(minFinish) && currentTime.Before(maxFinish.Add(minStayDuration)) {
+            pathCopy := make([]models.RoutePoint, len(currentPath))
+            copy(pathCopy, currentPath)
 
-			finalPoint := models.RoutePoint{
-				Name:           points[idx],
-				StartTimestamp: currentTime.Unix(),
-				EndTimestamp:   currentTime.Unix(),
-			}
-			finalPoint.SetDescription("Finish", 0)
+            var totalRoutePrice float64
+            for _, p := range pathCopy {
+                totalRoutePrice += p.Price
+            }
 
-			*results = append(*results, append(pathCopy, finalPoint))
-		}
-		return
-	}
+            finalPoint := models.RoutePoint{
+                Name:           points[idx],
+                StartTimestamp: currentTime.Unix(),
+                EndTimestamp:   currentTime.Unix(),
+                Price:          0.0,
+            }
+            finalPoint.SetDescription("Finish", totalRoutePrice)
+
+            *results = append(*results, append(pathCopy, finalPoint))
+        }
+        return
+    }
 
 	segmentKey := fmt.Sprintf("%s->%s", points[idx], points[idx+1])
 	candidates := pool[segmentKey]
@@ -104,11 +110,12 @@ func (b *DgraphItineraryBuilder) generatePaths(
 	}
 
 	for _, trip := range candidates {
-		if len(trip.Tickets) == 0 {
-			continue
-		}
 
+        
 		waitDuration := trip.DepartureAt.Sub(currentTime)
+
+        fmt.Printf("  -> Поезд %s: Найдено категорий билетов: %d, Время ожидания: %v\n", 
+            trip.ExternalID, len(trip.Tickets), waitDuration)
 
 		if waitDuration < minWait || waitDuration > maxStayDuration {
 			continue
@@ -124,14 +131,20 @@ func (b *DgraphItineraryBuilder) generatePaths(
 			latitude, longitude = &longitudeVal, &latitudeVal
 		}
 
-		point := models.RoutePoint{
-			Name:           points[idx],
-			StartTimestamp: currentTime.Unix(),
-			EndTimestamp:   trip.DepartureAt.Unix(),
-			Price:          trip.Price,
-			Latitude:       latitude,
-			Longitude:      longitude,
-		}
+		var totalTickets int64
+        for _, ticket := range trip.Tickets {
+            totalTickets += int64(ticket.Count)
+        }
+
+        point := models.RoutePoint{
+            Name:            points[idx],
+            StartTimestamp:  currentTime.Unix(),
+            EndTimestamp:    trip.DepartureAt.Unix(),
+            Price:           trip.Price,
+            AvailableAmount: totalTickets,
+            Latitude:        latitude,
+            Longitude:       longitude,
+        }
 		point.SetDescription(trip.ExternalID, trip.Price)
 
 		if idx == 0 {
@@ -200,127 +213,164 @@ func (b *DgraphItineraryBuilder) fetchFullPool(ctx context.Context, points []str
 }
 
 func (b *DgraphItineraryBuilder) fetchTrips(ctx context.Context, fromCity, toCity string, minDeparture, maxArrival time.Time, limit int) ([]graph.TripDTO, error) {
-	query := fmt.Sprintf(`query all($fromCity: string, $toCity: string, $minDeparture: string, $maxArrival: string) {
-		stations(func: eq(city.name, $fromCity)) {
-			has_station {
-				departs @filter(ge(trip.departure_at, $minDeparture) AND le(trip.departure_at, $maxArrival)) (orderasc: trip.departure_at, first: %d) {
-					uid
-					trip.external_id
-					trip.departure_at
-					trip.arrival_at
-					destination {
-						uid
-						station.name
-						city_info: ~has_station { 
-							city.name
-							city.location
-						}
-					}
-					has_ticket (orderasc: ticket.price, first: 1) {
-						ticket.type
-						ticket.price
-					}
-				}
-			}
-		}
-	}`, limit)
+    query := fmt.Sprintf(`query all($fromCity: string, $toCity: string, $minDeparture: string, $maxArrival: string) {
+        # 1. Находим координаты целевого города назначения (toCity), чтобы отобразить на карте
+        target_city(func: eq(city.name, $toCity)) {
+            city.name
+            city.location
+            has_station {
+                uid
+            }
+        }
 
-	vars := map[string]string{
-		"$fromCity":     fromCity,
-		"$toCity":       toCity,
-		"$minDeparture": minDeparture.UTC().Format(time.RFC3339),
-		"$maxArrival":   maxArrival.UTC().Format(time.RFC3339),
-	}
+        # 2. Находим вокзалы города отправления и их рейсы
+        origin_stations(func: eq(city.name, $fromCity)) {
+            has_station {
+                uid
+                departs @filter(ge(trip.departure_at, $minDeparture) AND le(trip.departure_at, $maxArrival)) (orderasc: trip.departure_at, first: %d) {
+                    uid
+                    dgraph.type
+                    trip.external_id
+                    trip.departure_at
+                    trip.arrival_at
+                    trip.price            
+                    trip.transport_type   
+    
+                    has_ticket {
+                        uid
+                        dgraph.type
+                        ticket.type
+                        ticket.price
+                        ticket.count
+                    }
+                    destination {
+                        uid
+                        station.name
+                    }
+                }
+            }
+        }
+    }`, limit)
 
-	txn := b.dg.Client.NewTxn()
-	defer txn.Discard(ctx)
+    vars := map[string]string{
+        "$fromCity":     fromCity,
+        "$toCity":       toCity,
+        "$minDeparture": minDeparture.UTC().Format(time.RFC3339),
+        "$maxArrival":   maxArrival.UTC().Format(time.RFC3339),
+    }
 
-	resp, err := txn.QueryWithVars(ctx, query, vars)
-	if err != nil {
-		return nil, fmt.Errorf("dgraph query (from %s to %s): %w", fromCity, toCity, err)
-	}
+    txn := b.dg.Client.NewTxn()
+    defer txn.Discard(ctx)
 
-	var decode struct {
-		Stations []struct {
-			HasStation []struct {
-				Departs []struct {
-					Uid         string    `json:"uid"`
-					ExternalID  string    `json:"trip.external_id"`
-					DepartureAt time.Time `json:"trip.departure_at"`
-					ArrivalAt   time.Time `json:"trip.arrival_at"`
-					Destination *struct {
-						Uid      string `json:"uid"`
-						Name     string `json:"station.name"`
-						CityInfo []struct {
-							Name     string `json:"city.name"`
-							Location *struct {
-								Type        string    `json:"type"`
-								Coordinates []float64 `json:"coordinates"`
-							} `json:"city.location"`
-						} `json:"city_info"`
-					} `json:"destination"`
-					Tickets []struct {
-						Type  string  `json:"ticket.type"`
-						Price float64 `json:"ticket.price"`
-					} `json:"has_ticket"`
-				} `json:"departs"`
-			} `json:"has_station"`
-		} `json:"stations"`
-	}
+    resp, err := txn.QueryWithVars(ctx, query, vars)
+    if err != nil {
+        return nil, fmt.Errorf("dgraph query (from %s to %s): %w", fromCity, toCity, err)
+    }
 
-	if err := json.Unmarshal(resp.Json, &decode); err != nil {
-		return nil, fmt.Errorf("decode dgraph response: %w", err)
-	}
+    var decode struct {
+        TargetCity []struct {
+            Name     string `json:"city.name"`
+            Location *struct {
+                Type        string    `json:"type"`
+                Coordinates []float64 `json:"coordinates"`
+            } `json:"city.location"`
+            HasStation []struct {
+                Uid string `json:"uid"`
+            } `json:"has_station"`
+        } `json:"target_city"`
 
-	var result []graph.TripDTO
-	for _, s := range decode.Stations {
-		for _, hs := range s.HasStation {
-			for _, d := range hs.Departs {
-				if d.Destination == nil || len(d.Destination.CityInfo) == 0 {
-					continue
-				}
+        OriginStations []struct {
+            HasStation []struct {
+                Uid     string `json:"uid"`
+                Departs []struct {
+                    Uid           string    `json:"uid"`
+                    DgraphType    []string  `json:"dgraph.type"`
+                    ExternalID    string    `json:"trip.external_id"`
+                    DepartureAt   time.Time `json:"trip.departure_at"`
+                    ArrivalAt     time.Time `json:"trip.arrival_at"`
+                    Price         float64   `json:"trip.price"`
+                    TransportType string    `json:"trip.transport_type"`
+                    HasTicket []struct {
+                        Uid   string  `json:"uid"`
+                        DgraphType []string `json:"dgraph.type"`
+                        Type  string  `json:"ticket.type"`
+                        Price float64 `json:"ticket.price"`
+                        Count int     `json:"ticket.count"`
+                    } `json:"has_ticket"`
+                    Destination   *struct {
+                        Uid  string `json:"uid"`
+                        Name string `json:"station.name"`
+                    } `json:"destination"`
+                } `json:"departs"`
+            } `json:"has_station"`
+        } `json:"origin_stations"`
+    }
 
-				if d.Destination.CityInfo[0].Name != toCity {
-					continue
-				}
+    if err := json.Unmarshal(resp.Json, &decode); err != nil {
+        return nil, fmt.Errorf("decode dgraph response: %w", err)
+    }
 
-				price := 0.0
-				var tickets []*graph.TicketDTO
-				if len(d.Tickets) > 0 {
-					price = d.Tickets[0].Price
-					tickets = []*graph.TicketDTO{{
-						Type:  d.Tickets[0].Type,
-						Price: d.Tickets[0].Price,
-					}}
-				}
+    // 1. Извлекаем координаты города назначения и маппим его станции
+    var targetCityLocation graph.GeoJSON
+    targetStationMap := make(map[string]bool)
 
-				var cityLocation graph.GeoJSON
-				if d.Destination.CityInfo[0].Location != nil {
-					cityLocation = graph.GeoJSON{
-						Type:        d.Destination.CityInfo[0].Location.Type,
-						Coordinates: d.Destination.CityInfo[0].Location.Coordinates,
-					}
-				}
+    if len(decode.TargetCity) > 0 {
+        tc := decode.TargetCity[0]
+        if tc.Location != nil {
+            targetCityLocation = graph.GeoJSON{
+                Type:        tc.Location.Type,
+                Coordinates: tc.Location.Coordinates,
+            }
+        }
+        for _, hs := range tc.HasStation {
+            targetStationMap[hs.Uid] = true
+        }
+    }
 
-				result = append(result, graph.TripDTO{
-					Uid:         d.Uid,
-					ExternalID:  d.ExternalID,
-					Price:       price,
-					DepartureAt: d.DepartureAt,
-					ArrivalAt:   d.ArrivalAt,
-					Destination: &graph.StationDTO{
-						Uid:  d.Destination.Uid,
-						Name: d.Destination.Name,
-						City: &graph.CityDTO{
-							Name:     d.Destination.CityInfo[0].Name,
-							Location: cityLocation,
-						},
-					},
-					Tickets: tickets,
-				})
-			}
-		}
-	}
+    // 2. Собираем пулл рейсов
+    var result []graph.TripDTO
+    for _, s := range decode.OriginStations {
+        for _, hs := range s.HasStation {
+            for _, d := range hs.Departs {
+                if d.Destination == nil || !targetStationMap[d.Destination.Uid] {
+                    continue
+                }
+                // === ВРЕМЕННЫЙ ТЕСТ ДЛЯ ПРОВЕРКИ ТИПОВ В БАЗЕ ===
+                fmt.Printf("[DEBUG_DGRAPH_TYPES] Рейс %s: dgraph.type=%v | Найдено сырых билетов в ответе JSON: %d\n", 
+                    d.ExternalID, d.DgraphType, len(d.HasTicket))
+                // ===============================================
 
-	return result, nil
+            // Перекладываем билеты из структуры декодера Dgraph в официальные TicketDTO
+                var ticketsPool []*graph.TicketDTO
+                for _, t := range d.HasTicket {
+                    ticketsPool = append(ticketsPool, &graph.TicketDTO{
+                        Uid:   t.Uid,
+                        Type:  t.Type,
+                        Price: t.Price,
+                        Count: t.Count,
+                    })
+                }
+
+                result = append(result, graph.TripDTO{
+                    Uid:           d.Uid,
+                    ExternalID:    d.ExternalID,
+                    Price:         d.Price,
+                    DepartureAt:   d.DepartureAt,
+                    ArrivalAt:     d.ArrivalAt,
+                    TransportType: d.TransportType, 
+                    Tickets:       ticketsPool,
+                    Destination: &graph.StationDTO{
+                        Uid:  d.Destination.Uid,
+                        Name: d.Destination.Name,
+                        City: &graph.CityDTO{
+                            Name:     toCity,
+                            Location: targetCityLocation,
+                        },
+                    },
+                })
+            }
+        }
+    }
+
+    return result, nil
 }

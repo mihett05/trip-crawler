@@ -38,27 +38,31 @@ func (h *Handler) CreateRoute(w http.ResponseWriter, r *http.Request) {
 
 	apiPoints := make([]api.RoutePoint, 0, len(route))
 	for _, point := range route {
-		var detailsPtr *string
-		if point.Details != "" {
-			detailsPtr = &point.Details
-		}
+        var detailsPtr *string
+        if point.Details != "" {
+            detailsPtr = &point.Details
+        }
 
-		var coordinates *api.Coordinates
-		if point.Latitude != nil && point.Longitude != nil {
-			coordinates = &api.Coordinates{
-				Latitude:  *point.Latitude,
-				Longitude: *point.Longitude,
-			}
-		}
+        var coordinates *api.Coordinates
+        if point.Latitude != nil && point.Longitude != nil {
+            coordinates = &api.Coordinates{
+                Latitude:  *point.Latitude,
+                Longitude: *point.Longitude,
+            }
+        }
+        transport := api.Train
 
-		apiPoints = append(apiPoints, api.RoutePoint{
-			Name:           point.Name,
-			StartTimestamp: point.StartTimestamp,
-			EndTimestamp:   point.EndTimestamp,
-			Details:        detailsPtr,
-			Coordinates:    coordinates,
-		})
-	}
+        apiPoints = append(apiPoints, api.RoutePoint{
+            Name:            point.Name,
+            StartTimestamp:  point.StartTimestamp,
+            EndTimestamp:    point.EndTimestamp,
+            Details:         detailsPtr,
+            Coordinates:     coordinates,
+            Price:           point.Price,
+            TransportType:   transport,
+            AvailableAmount: point.AvailableAmount,
+        })
+    }
 
 	api.Write(w, api.CreateRouteResponse{Points: apiPoints}, http.StatusOK)
 }

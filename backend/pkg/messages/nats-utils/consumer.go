@@ -20,9 +20,10 @@ type Consumer interface {
 func RunConsumer(ctx context.Context, stream jetstream.Stream, name string, handler Consumer, logger *zap.Logger) (jetstream.ConsumeContext, error) {
 	consumer, err := stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
 		Name:           name,
+		Durable:        name,
 		FilterSubjects: handler.GetSubjects(),
 		MaxDeliver:     5,
-		DeliverPolicy:  jetstream.DeliverNewPolicy,
+		AckPolicy:      jetstream.AckExplicitPolicy,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("stream.CreateOrUpdateConsumer: %w", err)

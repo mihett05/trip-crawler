@@ -79,51 +79,75 @@ func (r *Repository) InitSchema(ctx context.Context) error {
 }
 
 func (r *Repository) SaveTrip(ctx context.Context, trip *models.Trip) error {
-	destExternalID := ""
-	if trip.Destination != nil {
-		destExternalID = trip.Destination.ID
-	}
+    destExternalID := ""
+    if trip.Destination != nil {
+        destExternalID = trip.Destination.ID
+    }
 
-	query := fmt.Sprintf(`{
-    dest_v as var(func: eq(station.external_id, "%s"))
-  }`, destExternalID)
+    departExternalID := trip.ID
 
-	tripDTO := &TripDTO{
-		Uid:           "_:new_trip",
-		ExternalID:    trip.ExternalID,
-		DepartureAt:   trip.DepartureAt,
-		ArrivalAt:     trip.ArrivalAt,
-		Price:         trip.Price,
-		TransportType: trip.TransportType,
-		Type:          []string{"Trip"},
-	}
+    if departExternalID == "" || destExternalID == "" {
+        return fmt.Errorf("invalid trip: origin or destination station ID is empty")
+    }
 
-	if trip.Destination != nil {
-		tripDTO.Destination = &StationDTO{
-			Uid: "uid(dest_v)",
-		}
-	}
+    query := fmt.Sprintf(`{
+        orig_v as var(func: eq(station.external_id, "%s"))
+        dest_v as var(func: eq(station.external_id, "%s"))
+    }`, departExternalID, destExternalID)
 
-	transaction := r.dg.Client.NewTxn()
-	defer transaction.Discard(ctx)
+	ticketsMutation := make([]map[string]any, 0, len(trip.Tickets))
+    for _, t := range trip.Tickets {
+        ticketsMutation = append(ticketsMutation, map[string]any{
+            "dgraph.type":  "Ticket",
+            "ticket.type":  t.Type,
+            "ticket.price": t.Price,
+            "ticket.count": int(t.AvailableAmount),
+        })
+    }
 
-	tripJSON, err := json.Marshal(tripDTO)
-	if err != nil {
-		return fmt.Errorf("marshal trip (ID: %s): %w", trip.ExternalID, err)
-	}
+    mutation := map[string]any{
+        "uid": "uid(orig_v)", 
+        "dgraph.type": "Station",
+        "station.external_id": departExternalID, 
+        "departs": []map[string]any{
+            {
+                "uid":                 "_:new_trip",
+                "dgraph.type":         []string{"Trip"},
+                "trip.external_id":    trip.ExternalID,
+                "trip.departure_at":   trip.DepartureAt,
+                "trip.arrival_at":     trip.ArrivalAt,
+                "trip.price":          trip.Price,
+                "trip.transport_type": trip.TransportType,
+				"has_ticket":          ticketsMutation,
+                "destination": map[string]any{
+                    "uid": "uid(dest_v)",
+                    "dgraph.type": "Station",
+                    "station.external_id": destExternalID,
+                },
+            },
+        },
+    }
 
-	request := &api.Request{
-		Query:     query,
-		Mutations: []*api.Mutation{{SetJson: tripJSON}},
-		CommitNow: true,
-	}
+    transaction := r.dg.Client.NewTxn()
+    defer transaction.Discard(ctx)
 
-	_, err = transaction.Do(ctx, request)
-	if err != nil {
-		return fmt.Errorf("transaction.Do (Trip: %s): %w", trip.ExternalID, err)
-	}
+    mutationJSON, err := json.Marshal(mutation)
+    if err != nil {
+        return fmt.Errorf("marshal trip: %w", err)
+    }
 
-	return nil
+    request := &api.Request{
+        Query:     query,
+        Mutations: []*api.Mutation{{SetJson: mutationJSON}},
+        CommitNow: true,
+    }
+
+    _, err = transaction.Do(ctx, request)
+    if err != nil {
+        return fmt.Errorf("transaction.Do (Trip: %s): %w", trip.ExternalID, err)
+    }
+
+    return nil
 }
 func (r *Repository) GetCityStations(ctx context.Context, cityName string) ([]models.Station, error) {
 	query := `query all($name: string) {

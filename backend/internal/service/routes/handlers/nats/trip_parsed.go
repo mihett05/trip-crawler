@@ -13,20 +13,24 @@ func (h *Handler) HandleTripParsed(ctx context.Context, request messages.TripPar
 	t := request.Trip
 
 	tripModel := &models.Trip{
-		ExternalID:    t.ExternalID,
-		DepartureAt:   time.Unix(t.DepartureAtTimestamp, 0),
-		ArrivalAt:     time.Unix(t.ArrivalAtTimestamp, 0),
-		TransportType: t.TransportType,
-		Price:         0,
-	}
+        ID:            t.DepartStationID,
+        ExternalID:    t.ExternalID,
+        DepartureAt:   time.Unix(t.DepartureAtTimestamp, 0),
+        ArrivalAt:     time.Unix(t.ArrivalAtTimestamp, 0),
+        TransportType: t.TransportType,
+        Price:         0,
+        Tickets:       t.Availability,
+    }
 
 	if len(t.Availability) > 0 {
 		tripModel.Price = t.Availability[0].Price
 	}
 
 	if t.DestinationStationID != "" {
-		tripModel.Destination = &models.Station{ID: t.DestinationStationID}
-	}
+        tripModel.Destination = &models.Station{
+            ID: t.DestinationStationID, 
+        }
+    }
 
 	if err := h.service.SaveTrip(ctx, tripModel); err != nil {
 		return fmt.Errorf("failed to save trip %s: %w", t.ExternalID, err)
