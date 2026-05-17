@@ -1,0 +1,13 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: letsgotrip-tls
+  namespace: traefik
+spec:
+  secretName: letsgotrip-tls
+  dnsNames:
+    - letsgotrip.store
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+
