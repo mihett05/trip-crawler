@@ -14,6 +14,8 @@ spec:
         name: open-telemetry
         namespace: observability
   values:
+    image:
+      repository: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib
     mode: deployment
     config:
       receivers:
@@ -59,15 +61,6 @@ spec:
             receivers: [otlp]
             processors: [batch, memory_limiter]
             exporters: [otlphttp/victoriatraces]
-    ports:
-      otlp-grpc:
-        enabled: true
-        containerPort: 4317
-        servicePort: 4317
-      otlp-http:
-        enabled: true
-        containerPort: 4318
-        servicePort: 4318
     service:
       type: ClusterIP
 
