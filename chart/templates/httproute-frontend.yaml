@@ -1,5 +1,5 @@
 {{- if .Values.frontend.httpRoute.enabled -}}
-{{- $fullName := include "tripcrawler.fullname" . -}}
+{{- $fullName := include "tripcrawler.fullname" . -}}-frontend
 {{- $svcPort := .Values.frontend.service.port -}}
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
