@@ -1,0 +1,73 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: otel-collector
+  namespace: observability
+spec:
+  interval: 10m
+  chart:
+    spec:
+      chart: opentelemetry-collector
+      version: "0.156.0"
+      sourceRef:
+        kind: HelmRepository
+        name: open-telemetry
+        namespace: observability
+  values:
+    mode: deployment
+    config:
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: 0.0.0.0:4317
+            http:
+              endpoint: 0.0.0.0:4318
+      processors:
+        batch:
+          timeout: 1s
+          send_batch_size: 1024
+        memory_limiter:
+          check_interval: 5s
+          limit_mib: 512
+      exporters:
+        otlphttp/victoriametrics:
+          metrics_endpoint: http://vmsingle-victoria-k8s-stack-victoria-metrics-k8s-stack.observability.svc:8428/opentelemetry/v1/metrics
+          compression: gzip
+          encoding: proto
+
+        otlphttp/victorialogs:
+          logs_endpoint: http://victoria-logs-victoria-logs-single-server.observability.svc:9428/insert/opentelemetry/v1/logs
+          compression: gzip
+          encoding: proto
+
+        otlphttp/victoriatraces:
+          traces_endpoint: http://victoria-traces-vt-single-server.observability.svc:10428/insert/opentelemetry/v1/traces
+          compression: gzip
+          encoding: proto
+      service:
+        pipelines:
+          metrics:
+            receivers: [otlp]
+            processors: [batch, memory_limiter]
+            exporters: [otlphttp/victoriametrics]
+          logs:
+            receivers: [otlp]
+            processors: [batch, memory_limiter]
+            exporters: [otlphttp/victorialogs]
+          traces:
+            receivers: [otlp]
+            processors: [batch, memory_limiter]
+            exporters: [otlphttp/victoriatraces]
+    ports:
+      otlp-grpc:
+        enabled: true
+        containerPort: 4317
+        servicePort: 4317
+      otlp-http:
+        enabled: true
+        containerPort: 4318
+        servicePort: 4318
+    service:
+      type: ClusterIP
+
