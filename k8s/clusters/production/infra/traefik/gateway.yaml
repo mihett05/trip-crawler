@@ -19,6 +19,7 @@ spec:
         mode: Terminate
         certificateRefs:
           - name: letsgotrip-tls
+          - name: grafana-tls
       allowedRoutes:
         namespaces:
           from: All
