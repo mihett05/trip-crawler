@@ -2,6 +2,7 @@ package http
 
 import (
 	_ "embed"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -37,6 +38,9 @@ func NewHandler(config config.Config, logger *zap.Logger, routes *routehandlers.
 
 	r.Get("/openapi.json", ServeOpenAPI)
 	r.Get("/docs", ServeSwagger)
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "ok")
+	})
 
 	return r
 }
