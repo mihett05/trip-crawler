@@ -21,11 +21,17 @@ spec:
 
     ports:
       web:
-        port: 8080
+        port: 8081
+        hostPort: 8081
+        exposedPort: 8081
       websecure:
         port: 8443
+        hostPort: 8443
+        exposedPort: 8443
 
     service:
+      enabled: false
+    gateway:
       enabled: false
 
     api:
