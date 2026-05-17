@@ -1,0 +1,32 @@
+{{- if .Values.service.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "tripcrawler.fullname" . }}
+  labels:
+    {{- include "tripcrawler.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "tripcrawler.fullname" . }}
+  minReplicas: {{ .Values.service.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.service.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.service.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.service.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.service.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.service.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}

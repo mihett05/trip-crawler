@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tripcrawler.fullname" . }}-service
+  labels:
+    {{- include "tripcrawler.labels" . | nindent 4 }}
+    app.kubernetes.io/component: service
+spec:
+  {{- if not .Values.service.autoscaling.enabled }}
+  replicas: {{ .Values.service.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "tripcrawler.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: service
+  template:
+    metadata:
+      {{- with .Values.service.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "tripcrawler.labels" . | nindent 8 }}
+        {{- with .Values.service.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        app.kubernetes.io/component: service
+    spec:
+      {{- with .Values.service.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "tripcrawler.serviceAccountName" . }}
+      {{- with .Values.service.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          {{- with .Values.service.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.service.image.repository }}:{{ .Values.service.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.service.image.pullPolicy }}
+          env:
+            {{- range .Values.service.env }}
+              - name: {{ .name }}
+              {{- if .value }}
+                value: {{ .value | quote }}
+              {{- else if .valueFrom }}
+                valueFrom:
+                  {{- toYaml .valueFrom | nindent 12 }}
+              {{- end }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.service.port }}
+              protocol: TCP
+          {{- with .Values.service.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.service.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.service.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.service.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.service.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.service.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.service.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.service.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
