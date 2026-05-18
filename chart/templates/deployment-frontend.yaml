@@ -24,7 +24,7 @@ spec:
         {{- with .Values.frontend.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        app.kubernetes.io/component: service
+        app.kubernetes.io/component: frontend
     spec:
       {{- with .Values.frontend.imagePullSecrets }}
       imagePullSecrets:
